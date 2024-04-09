@@ -987,7 +987,7 @@ func Test_MinerWithHistory(t *testing.T) {
 
 	m, h, IDT0Changed, pendingAmountForTMinus1, pendingAmountForT0 := mine(testMiningBase, testTime, m, nil, nil)
 	require.NotNil(t, m)
-	require.True(t, h)
+	require.False(t, h)
 
 	require.EqualValues(t, float64(testMiningBase), m.BalanceSolo)
 	require.False(t, IDT0Changed)
@@ -999,6 +999,23 @@ func Test_MinerWithHistory(t *testing.T) {
 	require.EqualValues(t, 0, m.BalanceForTMinus1)
 
 	t.Logf("new:     %p", m)
+
+	m.BalanceLastUpdatedAt = time.New(testTime.Add(-stdlibtime.Hour * 24))
+	m.BalanceForT0 = 1440
+	m.BalanceForTMinus1 = 1440
+
+	m, h, IDT0Changed, pendingAmountForTMinus1, pendingAmountForT0 = mine(testMiningBase, testTime, m, nil, nil)
+	require.NotNil(t, m)
+	require.True(t, h)
+
+	require.EqualValues(t, 400, m.BalanceSolo)
+	require.False(t, IDT0Changed)
+	require.EqualValues(t, 0, m.IDT0)
+	require.EqualValues(t, 0, m.IDTMinus1)
+	require.EqualValues(t, 0, pendingAmountForTMinus1)
+	require.EqualValues(t, 0, pendingAmountForT0)
+	require.EqualValues(t, 0, m.BalanceForT0)
+	require.EqualValues(t, 0, m.BalanceForTMinus1)
 }
 
 func Test_MinerNegativeBalance(t *testing.T) {
