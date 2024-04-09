@@ -33,7 +33,6 @@ func mine(baseMiningRate float64, now *time.Time, usr *user, t0Ref, tMinus1Ref *
 	} else {
 		if updatedUser.BalanceLastUpdatedAt.Year() != now.Year() ||
 			updatedUser.BalanceLastUpdatedAt.YearDay() != now.YearDay() ||
-			updatedUser.BalanceLastUpdatedAt.Hour() != now.Hour() ||
 			(cfg.Development && updatedUser.BalanceLastUpdatedAt.Minute() != now.Minute()) {
 			shouldGenerateHistory = true
 			updatedUser.BalanceTotalSlashed = 0

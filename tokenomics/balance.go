@@ -108,18 +108,24 @@ func (r *repository) calculateDates(limit, offset uint64, start, end *time.Time,
 	calculatedLimit := (limit / hoursInADay) * uint64(r.cfg.GlobalAggregationInterval.Parent/r.cfg.GlobalAggregationInterval.Child)
 	var afterStartPadding, beforeStartPadding uint64
 	if factor > 0 {
-		if r.cfg.GlobalAggregationInterval.Child == stdlibtime.Hour {
-			afterStartPadding = 24 - uint64(start.Add(stdlibtime.Duration(calculatedLimit*uint64(stdlibtime.Hour))).Hour())
-			beforeStartPadding = uint64(start.Add(stdlibtime.Duration(-calculatedLimit * uint64(stdlibtime.Hour))).Hour())
-		} else {
+		if r.cfg.GlobalAggregationInterval.Child == r.cfg.GlobalAggregationInterval.Parent && r.cfg.GlobalAggregationInterval.Child == 24*stdlibtime.Hour {
+			afterStartPadding = 0
+			beforeStartPadding = 0
+		} else if r.cfg.GlobalAggregationInterval.Child == stdlibtime.Minute {
 			afterStartPadding = 60 - uint64(start.Add(stdlibtime.Duration(-calculatedLimit*uint64(stdlibtime.Minute))).Minute())
 			beforeStartPadding = uint64(start.Add(stdlibtime.Duration(-calculatedLimit * uint64(stdlibtime.Minute))).Minute())
+		} else {
+			afterStartPadding = 24 - uint64(start.Add(stdlibtime.Duration(calculatedLimit*uint64(stdlibtime.Hour))).Hour())
+			beforeStartPadding = uint64(start.Add(stdlibtime.Duration(-calculatedLimit * uint64(stdlibtime.Hour))).Hour())
 		}
 	} else {
-		if r.cfg.GlobalAggregationInterval.Child == stdlibtime.Hour {
-			beforeStartPadding = uint64(start.Add(stdlibtime.Duration(-calculatedLimit*uint64(stdlibtime.Hour))).Hour()) + 1
-		} else {
+		if r.cfg.GlobalAggregationInterval.Child == r.cfg.GlobalAggregationInterval.Parent && r.cfg.GlobalAggregationInterval.Child == 24*stdlibtime.Hour {
+			beforeStartPadding = 0
+			afterStartPadding = 0
+		} else if r.cfg.GlobalAggregationInterval.Child == stdlibtime.Minute {
 			beforeStartPadding = uint64(start.Add(stdlibtime.Duration(-calculatedLimit*uint64(stdlibtime.Minute))).Minute()) + 1
+		} else {
+			beforeStartPadding = uint64(start.Add(stdlibtime.Duration(-calculatedLimit*uint64(stdlibtime.Hour))).Hour()) + 1
 		}
 	}
 	mappedLimit := calculatedLimit + beforeStartPadding + afterStartPadding
@@ -129,7 +135,10 @@ func (r *repository) calculateDates(limit, offset uint64, start, end *time.Time,
 		for ix := stdlibtime.Duration(mappedOffset); ix < stdlibtime.Duration(mappedLimit+mappedOffset); ix++ {
 			dates = append(dates, start.Add(-stdlibtime.Duration(beforeStartPadding)*r.cfg.GlobalAggregationInterval.Child).Add(ix*factor*r.cfg.GlobalAggregationInterval.Child).Truncate(r.cfg.GlobalAggregationInterval.Child))
 		}
-		if r.cfg.GlobalAggregationInterval.Child == stdlibtime.Hour {
+		if r.cfg.GlobalAggregationInterval.Child == r.cfg.GlobalAggregationInterval.Parent && r.cfg.GlobalAggregationInterval.Child == 24*stdlibtime.Hour {
+			notBeforeTime = time.New(start.Truncate(r.cfg.GlobalAggregationInterval.Child).Add(stdlibtime.Duration(mappedOffset * uint64(24*stdlibtime.Hour))))
+			notAfterTime = time.New(start.Truncate(r.cfg.GlobalAggregationInterval.Child).Add(stdlibtime.Duration((calculatedLimit + mappedOffset) * uint64(24*stdlibtime.Hour))))
+		} else if r.cfg.GlobalAggregationInterval.Child == stdlibtime.Hour {
 			notBeforeTime = time.New(start.Add(stdlibtime.Duration(mappedOffset * uint64(stdlibtime.Hour))))
 			notAfterTime = time.New(start.Add(stdlibtime.Duration((calculatedLimit + mappedOffset) * uint64(stdlibtime.Hour))))
 		} else {
@@ -137,13 +146,20 @@ func (r *repository) calculateDates(limit, offset uint64, start, end *time.Time,
 			notAfterTime = time.New(start.Add(stdlibtime.Duration((calculatedLimit + mappedOffset) * uint64(stdlibtime.Minute))))
 		}
 		if notAfterTime.UnixNano() > end.UnixNano() {
-			notAfterTime = end
+			if r.cfg.GlobalAggregationInterval.Child == r.cfg.GlobalAggregationInterval.Parent && r.cfg.GlobalAggregationInterval.Child == 24*stdlibtime.Hour {
+				notAfterTime = time.New(end.Truncate(r.cfg.GlobalAggregationInterval.Child))
+			} else {
+				notAfterTime = end
+			}
 		}
 	} else {
 		for ix := stdlibtime.Duration(mappedOffset); ix < stdlibtime.Duration(mappedLimit+mappedOffset); ix++ {
 			dates = append(dates, start.Add(ix*factor*r.cfg.GlobalAggregationInterval.Child).Truncate(r.cfg.GlobalAggregationInterval.Child))
 		}
-		if r.cfg.GlobalAggregationInterval.Child == stdlibtime.Hour {
+		if r.cfg.GlobalAggregationInterval.Child == r.cfg.GlobalAggregationInterval.Parent && r.cfg.GlobalAggregationInterval.Child == 24*stdlibtime.Hour {
+			notBeforeTime = time.New(start.Truncate(r.cfg.GlobalAggregationInterval.Child).Add(stdlibtime.Duration((-calculatedLimit - mappedOffset) * uint64(24*stdlibtime.Hour))))
+			notAfterTime = time.New(start.Truncate(r.cfg.GlobalAggregationInterval.Child).Add(stdlibtime.Duration(-mappedOffset * uint64(24*stdlibtime.Hour))))
+		} else if r.cfg.GlobalAggregationInterval.Child == stdlibtime.Hour {
 			notBeforeTime = time.New(start.Add(stdlibtime.Duration((-calculatedLimit - mappedOffset) * uint64(stdlibtime.Hour))))
 			notAfterTime = time.New(start.Add(stdlibtime.Duration(-mappedOffset * uint64(stdlibtime.Hour))))
 		} else {

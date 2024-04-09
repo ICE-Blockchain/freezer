@@ -590,6 +590,113 @@ func TestCalculateDates_Limit48_Offset48_FactorMinus1(t *testing.T) {
 	assert.EqualValues(t, expected, dates)
 }
 
+func TestCalculateDates_ChildParent24H_Limit24_Offset0(t *testing.T) {
+	t.Parallel()
+	repo := &repository{cfg: &Config{
+		GlobalAggregationInterval: struct {
+			Parent stdlibtime.Duration `yaml:"parent"`
+			Child  stdlibtime.Duration `yaml:"child"`
+		}{
+			Parent: 24 * stdlibtime.Hour,
+			Child:  24 * stdlibtime.Hour,
+		},
+	}}
+
+	// Factor > 0, limit = 24, offset = 0
+	limit := uint64(24)
+	offset := uint64(0)
+	start := time.New(stdlibtime.Date(2023, 6, 5, 5, 15, 10, 1, stdlibtime.UTC))
+	end := time.New(stdlibtime.Date(2023, 6, 7, 5, 15, 10, 1, stdlibtime.UTC))
+	factor := stdlibtime.Duration(1)
+	dates, notBeforeTime, notAfterTime := repo.calculateDates(limit, offset, start, end, factor)
+	assert.Len(t, dates, 1)
+	assert.Equal(t, time.New(stdlibtime.Date(2023, 6, 5, 0, 0, 0, 0, stdlibtime.UTC)), notBeforeTime)
+	assert.Equal(t, time.New(stdlibtime.Date(2023, 6, 6, 0, 0, 0, 0, stdlibtime.UTC)), notAfterTime)
+	expectedStart := time.New(stdlibtime.Date(2023, 6, 5, 0, 0, 0, 0, stdlibtime.UTC))
+	assert.EqualValues(t, []stdlibtime.Time{
+		*expectedStart.Time,
+	}, dates)
+
+	// Factor > 0, limit = 48, offset = 0
+	limit = uint64(48)
+	offset = uint64(0)
+	start = time.New(stdlibtime.Date(2023, 6, 5, 5, 15, 10, 1, stdlibtime.UTC))
+	end = time.New(stdlibtime.Date(2023, 6, 7, 5, 15, 10, 1, stdlibtime.UTC))
+	factor = stdlibtime.Duration(1)
+	dates, notBeforeTime, notAfterTime = repo.calculateDates(limit, offset, start, end, factor)
+	assert.Equal(t, time.New(stdlibtime.Date(2023, 6, 5, 0, 0, 0, 0, stdlibtime.UTC)), notBeforeTime)
+	assert.Equal(t, time.New(stdlibtime.Date(2023, 6, 7, 0, 0, 0, 0, stdlibtime.UTC)), notAfterTime)
+	assert.Len(t, dates, 2)
+	expectedStart = time.New(stdlibtime.Date(2023, 6, 5, 0, 0, 0, 0, stdlibtime.UTC))
+	assert.EqualValues(t, []stdlibtime.Time{
+		*expectedStart.Time,
+		expectedStart.Add(1 * repo.cfg.GlobalAggregationInterval.Child),
+	}, dates)
+
+	// Factor > 0, limit = 48, offset = 48
+	limit = uint64(48)
+	offset = uint64(48)
+	start = time.New(stdlibtime.Date(2023, 6, 5, 5, 15, 10, 1, stdlibtime.UTC))
+	end = time.New(stdlibtime.Date(2023, 6, 7, 5, 15, 10, 1, stdlibtime.UTC))
+	factor = stdlibtime.Duration(1)
+	dates, notBeforeTime, notAfterTime = repo.calculateDates(limit, offset, start, end, factor)
+	assert.Equal(t, time.New(stdlibtime.Date(2023, 6, 7, 0, 0, 0, 0, stdlibtime.UTC)), notBeforeTime)
+	assert.Equal(t, time.New(stdlibtime.Date(2023, 6, 7, 0, 0, 0, 0, stdlibtime.UTC)), notAfterTime)
+	assert.Len(t, dates, 2)
+	expectedStart = time.New(stdlibtime.Date(2023, 6, 5, 0, 0, 0, 0, stdlibtime.UTC))
+	assert.EqualValues(t, []stdlibtime.Time{
+		expectedStart.Add(2 * repo.cfg.GlobalAggregationInterval.Child),
+		expectedStart.Add(3 * repo.cfg.GlobalAggregationInterval.Child),
+	}, dates)
+
+	// Factor < 0, limit = 24, offset = 0
+	limit = uint64(24)
+	offset = uint64(0)
+	start = time.New(stdlibtime.Date(2023, 6, 5, 5, 15, 10, 1, stdlibtime.UTC))
+	end = time.New(stdlibtime.Date(2023, 6, 4, 5, 15, 10, 1, stdlibtime.UTC))
+	factor = stdlibtime.Duration(-1)
+	dates, notBeforeTime, notAfterTime = repo.calculateDates(limit, offset, start, end, factor)
+	assert.Len(t, dates, 1)
+	assert.Equal(t, time.New(stdlibtime.Date(2023, 6, 4, 0, 0, 0, 0, stdlibtime.UTC)), notBeforeTime)
+	assert.Equal(t, time.New(stdlibtime.Date(2023, 6, 5, 0, 0, 0, 0, stdlibtime.UTC)), notAfterTime)
+	expectedStart = time.New(stdlibtime.Date(2023, 6, 5, 0, 0, 0, 0, stdlibtime.UTC))
+	assert.EqualValues(t, []stdlibtime.Time{
+		*expectedStart.Time,
+	}, dates)
+
+	// Factor < 0, limit = 48, offset = 0
+	limit = uint64(48)
+	offset = uint64(0)
+	start = time.New(stdlibtime.Date(2023, 6, 5, 5, 15, 10, 1, stdlibtime.UTC))
+	end = time.New(stdlibtime.Date(2023, 6, 4, 5, 15, 10, 1, stdlibtime.UTC))
+	factor = stdlibtime.Duration(-1)
+	dates, notBeforeTime, notAfterTime = repo.calculateDates(limit, offset, start, end, factor)
+	assert.Len(t, dates, 2)
+	assert.Equal(t, time.New(stdlibtime.Date(2023, 6, 3, 0, 0, 0, 0, stdlibtime.UTC)), notBeforeTime)
+	assert.Equal(t, time.New(stdlibtime.Date(2023, 6, 5, 0, 0, 0, 0, stdlibtime.UTC)), notAfterTime)
+	expectedStart = time.New(stdlibtime.Date(2023, 6, 5, 0, 0, 0, 0, stdlibtime.UTC))
+	assert.EqualValues(t, []stdlibtime.Time{
+		*expectedStart.Time,
+		expectedStart.Add(-1 * repo.cfg.GlobalAggregationInterval.Child),
+	}, dates)
+
+	// Factor < 0, limit = 48, offset = 48
+	limit = uint64(48)
+	offset = uint64(0)
+	start = time.New(stdlibtime.Date(2023, 6, 5, 5, 15, 10, 1, stdlibtime.UTC))
+	end = time.New(stdlibtime.Date(2023, 6, 4, 5, 15, 10, 1, stdlibtime.UTC))
+	factor = stdlibtime.Duration(-1)
+	dates, notBeforeTime, notAfterTime = repo.calculateDates(limit, offset, start, end, factor)
+	assert.Len(t, dates, 2)
+	assert.Equal(t, time.New(stdlibtime.Date(2023, 6, 3, 0, 0, 0, 0, stdlibtime.UTC)), notBeforeTime)
+	assert.Equal(t, time.New(stdlibtime.Date(2023, 6, 5, 0, 0, 0, 0, stdlibtime.UTC)), notAfterTime)
+	expectedStart = time.New(stdlibtime.Date(2023, 6, 5, 0, 0, 0, 0, stdlibtime.UTC))
+	assert.EqualValues(t, []stdlibtime.Time{
+		*expectedStart.Time,
+		expectedStart.Add(-1 * repo.cfg.GlobalAggregationInterval.Child),
+	}, dates)
+}
+
 func TestProcessBalanceHistory_ChildIsHour(t *testing.T) {
 	t.Parallel()
 	repo := &repository{cfg: &Config{
@@ -1989,4 +2096,179 @@ func expectedEnhancedBlockchainStats(sourceStats *TotalCoinsSummary, totals floa
 	expected.Blockchain = totals
 
 	return &expected
+}
+
+func TestProcessBalanceHistory_ChildIsEqualToParent24H(t *testing.T) {
+	t.Parallel()
+	repo := &repository{cfg: &Config{
+		GlobalAggregationInterval: struct {
+			Parent stdlibtime.Duration `yaml:"parent"`
+			Child  stdlibtime.Duration `yaml:"child"`
+		}{
+			Parent: 24 * stdlibtime.Hour,
+			Child:  24 * stdlibtime.Hour,
+		},
+	}}
+	now := time.New(stdlibtime.Date(2023, 6, 1, 0, 0, 0, 0, stdlibtime.UTC))
+	history := []*dwh.BalanceHistory{
+		{
+			CreatedAt:           now,
+			BalanceTotalMinted:  25.,
+			BalanceTotalSlashed: 0.,
+		},
+		{
+			CreatedAt:           time.New(now.Add(-1 * repo.cfg.GlobalAggregationInterval.Child)),
+			BalanceTotalMinted:  28.,
+			BalanceTotalSlashed: 0.,
+		},
+		{
+			CreatedAt:           time.New(now.Add(-2 * repo.cfg.GlobalAggregationInterval.Child)),
+			BalanceTotalMinted:  28.,
+			BalanceTotalSlashed: 0.,
+		},
+	}
+
+	notBeforeTime := time.New(now.Add(-24 * repo.cfg.GlobalAggregationInterval.Child))
+	notAfterTime := now
+	startDateIsBeforeEndDate := true
+
+	entries := repo.processBalanceHistory(history, startDateIsBeforeEndDate, notBeforeTime, notAfterTime)
+
+	expected := []*BalanceHistoryEntry{
+		{
+			Time: stdlibtime.Date(2023, 5, 30, 0, 0, 0, 0, stdlibtime.UTC),
+			Balance: &BalanceHistoryBalanceDiff{
+				amount:   28.,
+				Amount:   "28.00",
+				Bonus:    0.,
+				Negative: false,
+			},
+			TimeSeries: []*BalanceHistoryEntry{
+				{
+					Time: stdlibtime.Date(2023, 5, 30, 0, 0, 0, 0, stdlibtime.UTC),
+					Balance: &BalanceHistoryBalanceDiff{
+						amount:   28.,
+						Amount:   "28.00",
+						Negative: false,
+						Bonus:    0,
+					},
+					TimeSeries: []*BalanceHistoryEntry{},
+				},
+			},
+		},
+		{
+			Time: stdlibtime.Date(2023, 5, 31, 0, 0, 0, 0, stdlibtime.UTC),
+			Balance: &BalanceHistoryBalanceDiff{
+				amount:   28.,
+				Amount:   "28.00",
+				Bonus:    0.,
+				Negative: false,
+			},
+			TimeSeries: []*BalanceHistoryEntry{
+				{
+					Time: stdlibtime.Date(2023, 5, 31, 0, 0, 0, 0, stdlibtime.UTC),
+					Balance: &BalanceHistoryBalanceDiff{
+						amount:   28.,
+						Amount:   "28.00",
+						Negative: false,
+						Bonus:    0,
+					},
+					TimeSeries: []*BalanceHistoryEntry{},
+				},
+			},
+		},
+		{
+			Time: *time.New(stdlibtime.Date(2023, 6, 1, 0, 0, 0, 0, stdlibtime.UTC)).Time,
+			Balance: &BalanceHistoryBalanceDiff{
+				amount:   25.,
+				Amount:   "25.00",
+				Bonus:    -10.71,
+				Negative: false,
+			},
+			TimeSeries: []*BalanceHistoryEntry{
+				{
+					Time: stdlibtime.Date(2023, 6, 1, 0, 0, 0, 0, stdlibtime.UTC),
+					Balance: &BalanceHistoryBalanceDiff{
+						amount:   25.,
+						Amount:   "25.00",
+						Negative: false,
+						Bonus:    -10.71,
+					},
+					TimeSeries: []*BalanceHistoryEntry{},
+				},
+			},
+		},
+	}
+	assert.EqualValues(t, expected, entries)
+
+	startDateIsBeforeEndDate = false
+	entries = repo.processBalanceHistory(history, startDateIsBeforeEndDate, notBeforeTime, notAfterTime)
+
+	expected = []*BalanceHistoryEntry{
+		{
+			Time: *time.New(stdlibtime.Date(2023, 6, 1, 0, 0, 0, 0, stdlibtime.UTC)).Time,
+			Balance: &BalanceHistoryBalanceDiff{
+				amount:   25.,
+				Amount:   "25.00",
+				Bonus:    -10.71,
+				Negative: false,
+			},
+			TimeSeries: []*BalanceHistoryEntry{
+				{
+					Time: stdlibtime.Date(2023, 6, 1, 0, 0, 0, 0, stdlibtime.UTC),
+					Balance: &BalanceHistoryBalanceDiff{
+						amount:   25.,
+						Amount:   "25.00",
+						Negative: false,
+						Bonus:    -10.71,
+					},
+					TimeSeries: []*BalanceHistoryEntry{},
+				},
+			},
+		},
+		{
+			Time: stdlibtime.Date(2023, 5, 31, 0, 0, 0, 0, stdlibtime.UTC),
+			Balance: &BalanceHistoryBalanceDiff{
+				amount:   28.,
+				Amount:   "28.00",
+				Bonus:    0.,
+				Negative: false,
+			},
+			TimeSeries: []*BalanceHistoryEntry{
+				{
+					Time: stdlibtime.Date(2023, 5, 31, 0, 0, 0, 0, stdlibtime.UTC),
+					Balance: &BalanceHistoryBalanceDiff{
+						amount:   28.,
+						Amount:   "28.00",
+						Negative: false,
+						Bonus:    0,
+					},
+					TimeSeries: []*BalanceHistoryEntry{},
+				},
+			},
+		},
+		{
+			Time: stdlibtime.Date(2023, 5, 30, 0, 0, 0, 0, stdlibtime.UTC),
+			Balance: &BalanceHistoryBalanceDiff{
+				amount:   28.,
+				Amount:   "28.00",
+				Bonus:    0.,
+				Negative: false,
+			},
+			TimeSeries: []*BalanceHistoryEntry{
+				{
+					Time: stdlibtime.Date(2023, 5, 30, 0, 0, 0, 0, stdlibtime.UTC),
+					Balance: &BalanceHistoryBalanceDiff{
+						amount:   28.,
+						Amount:   "28.00",
+						Negative: false,
+						Bonus:    0,
+					},
+					TimeSeries: []*BalanceHistoryEntry{},
+				},
+			},
+		},
+	}
+
+	assert.EqualValues(t, expected, entries)
 }
