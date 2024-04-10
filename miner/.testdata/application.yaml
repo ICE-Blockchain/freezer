@@ -13,3 +13,5 @@ miner:
   ethereumDistributionFrequency:
     min: 24h
     max: 672h
+  slashingStartInterval: 168h
+  slashingDaysCount: 10

@@ -620,6 +620,32 @@ func testNegativeMiningSoloSlashing(t *testing.T) {
 	m, _, IDT0Changed, pendingAmountForTMinus1, pendingAmountForT0 := mine(testMiningBase, testTime, m, nil, nil)
 	require.NotNil(t, m)
 
+	require.EqualValues(t, 0, m.SlashingRateSolo)
+	require.EqualValues(t, 0, m.SlashingRateT0)
+	require.EqualValues(t, 0, m.SlashingRateT1)
+	require.EqualValues(t, 0, m.SlashingRateT2)
+	require.EqualValues(t, 0, m.SlashingRateForT0)
+	require.EqualValues(t, 0, m.SlashingRateForTMinus1)
+	require.EqualValues(t, 0, pendingAmountForTMinus1)
+	require.EqualValues(t, 0, pendingAmountForT0)
+
+	require.EqualValues(t, 1440, m.BalanceSolo)
+	require.EqualValues(t, 1440, m.BalanceT0)
+	require.EqualValues(t, 1440, m.BalanceT1)
+	require.EqualValues(t, 1440, m.BalanceT2)
+	require.EqualValues(t, 1440, m.BalanceForT0)
+	require.EqualValues(t, 0, m.BalanceForTMinus1)
+	require.False(t, IDT0Changed)
+	require.EqualValues(t, testIDT0, m.IDT0)
+	require.EqualValues(t, 0, m.IDTMinus1)
+
+	m.BalanceLastUpdatedAt = timeDelta(-168 * stdlibtime.Hour)
+	m.MiningSessionSoloStartedAt = timeDelta(-192 * stdlibtime.Hour)
+	m.MiningSessionSoloEndedAt = timeDelta(-168 * stdlibtime.Hour)
+
+	m, _, IDT0Changed, pendingAmountForTMinus1, pendingAmountForT0 = mine(testMiningBase, testTime, m, nil, nil)
+	require.NotNil(t, m)
+
 	require.EqualValues(t, 6, m.SlashingRateSolo)
 	require.EqualValues(t, 0, m.SlashingRateT0)
 	require.EqualValues(t, 0, m.SlashingRateT1)
@@ -629,7 +655,7 @@ func testNegativeMiningSoloSlashing(t *testing.T) {
 	require.EqualValues(t, 0, pendingAmountForTMinus1)
 	require.EqualValues(t, 0, pendingAmountForT0)
 
-	require.EqualValues(t, 1434, m.BalanceSolo)
+	require.EqualValues(t, 432, m.BalanceSolo)
 	require.EqualValues(t, 1440, m.BalanceT0)
 	require.EqualValues(t, 1440, m.BalanceT1)
 	require.EqualValues(t, 1440, m.BalanceT2)
@@ -657,12 +683,33 @@ func testNegativeMiningT0Slashing(t *testing.T) {
 	require.NotNil(t, m)
 
 	require.EqualValues(t, 0, m.SlashingRateSolo)
+	require.EqualValues(t, 0, m.SlashingRateT0)
+	require.EqualValues(t, 0, m.SlashingRateForT0)
+	require.EqualValues(t, 0, pendingAmountForTMinus1)
+	require.EqualValues(t, 0, pendingAmountForT0)
+
+	require.EqualValues(t, 1440, m.BalanceForT0)
+	require.EqualValues(t, 0, m.BalanceForTMinus1)
+	require.False(t, IDT0Changed)
+	require.EqualValues(t, testIDT0, m.IDT0)
+	require.EqualValues(t, 0, m.IDTMinus1)
+
+	m.BalanceLastUpdatedAt = timeDelta(-168 * stdlibtime.Hour)
+	m.MiningSessionSoloStartedAt = timeDelta(-192 * stdlibtime.Hour)
+	m.MiningSessionSoloEndedAt = timeDelta(-168 * stdlibtime.Hour)
+
+	ref.MiningSessionSoloStartedAt = timeDelta(-192 * stdlibtime.Hour)
+	ref.MiningSessionSoloEndedAt = timeDelta(-168 * stdlibtime.Hour)
+
+	m, _, IDT0Changed, pendingAmountForTMinus1, pendingAmountForT0 = mine(testMiningBase, testTime, m, ref, nil)
+
+	require.EqualValues(t, 0, m.SlashingRateSolo)
 	require.EqualValues(t, 6, m.SlashingRateT0)
 	require.EqualValues(t, 6, m.SlashingRateForT0)
 	require.EqualValues(t, 0, pendingAmountForTMinus1)
-	require.EqualValues(t, -6, pendingAmountForT0)
+	require.EqualValues(t, -1008, pendingAmountForT0)
 
-	require.EqualValues(t, 1434, m.BalanceForT0)
+	require.EqualValues(t, 432, m.BalanceForT0)
 	require.EqualValues(t, 0, m.BalanceForTMinus1)
 	require.False(t, IDT0Changed)
 	require.EqualValues(t, testIDT0, m.IDT0)
@@ -688,19 +735,47 @@ func testNegativeMiningT0SlashingSoloSlashing(t *testing.T) {
 	m, _, IDT0Changed, pendingAmountForTMinus1, pendingAmountForT0 := mine(testMiningBase, testTime, m, ref, nil)
 	require.NotNil(t, m)
 
+	require.EqualValues(t, 0, m.SlashingRateSolo)
+	require.EqualValues(t, 0, m.SlashingRateT0)
+	require.EqualValues(t, 0, m.SlashingRateT1)
+	require.EqualValues(t, 0, m.SlashingRateT2)
+	require.EqualValues(t, 0, m.SlashingRateForT0)
+	require.EqualValues(t, 0, pendingAmountForTMinus1)
+	require.EqualValues(t, 0, pendingAmountForT0)
+
+	require.EqualValues(t, 1440, m.BalanceSolo)
+	require.EqualValues(t, 1440, m.BalanceT0)
+	require.EqualValues(t, 1440, m.BalanceT1)
+	require.EqualValues(t, 1440, m.BalanceT2)
+	require.EqualValues(t, 1440, m.BalanceForT0)
+	require.EqualValues(t, 0, m.BalanceForTMinus1)
+	require.False(t, IDT0Changed)
+	require.EqualValues(t, testIDT0, m.IDT0)
+	require.EqualValues(t, 0, m.IDTMinus1)
+
+	m.BalanceLastUpdatedAt = timeDelta(-168 * stdlibtime.Hour)
+	m.MiningSessionSoloStartedAt = timeDelta(-192 * stdlibtime.Hour)
+	m.MiningSessionSoloEndedAt = timeDelta(-168 * stdlibtime.Hour)
+
+	ref.MiningSessionSoloStartedAt = timeDelta(-192 * stdlibtime.Hour)
+	ref.MiningSessionSoloEndedAt = timeDelta(-168 * stdlibtime.Hour)
+
+	m, _, IDT0Changed, pendingAmountForTMinus1, pendingAmountForT0 = mine(testMiningBase, testTime, m, ref, nil)
+	require.NotNil(t, m)
+
 	require.EqualValues(t, 6, m.SlashingRateSolo)
 	require.EqualValues(t, 6, m.SlashingRateT0)
 	require.EqualValues(t, 0, m.SlashingRateT1)
 	require.EqualValues(t, 0, m.SlashingRateT2)
 	require.EqualValues(t, 6, m.SlashingRateForT0)
 	require.EqualValues(t, 0, pendingAmountForTMinus1)
-	require.EqualValues(t, -6, pendingAmountForT0)
+	require.EqualValues(t, -1008, pendingAmountForT0)
 
-	require.EqualValues(t, 1434, m.BalanceSolo)
-	require.EqualValues(t, 1434, m.BalanceT0)
+	require.EqualValues(t, 432, m.BalanceSolo)
+	require.EqualValues(t, 432, m.BalanceT0)
 	require.EqualValues(t, 1440, m.BalanceT1)
 	require.EqualValues(t, 1440, m.BalanceT2)
-	require.EqualValues(t, 1434, m.BalanceForT0)
+	require.EqualValues(t, 432, m.BalanceForT0)
 	require.EqualValues(t, 0, m.BalanceForTMinus1)
 	require.False(t, IDT0Changed)
 	require.EqualValues(t, testIDT0, m.IDT0)
@@ -713,6 +788,7 @@ func testNegativeMiningT1minusSlashingSoloMining(t *testing.T) {
 	m.MiningSessionSoloStartedAt = timeDelta(-stdlibtime.Hour)
 	m.MiningSessionSoloEndedAt = timeDelta(23 * stdlibtime.Hour)
 	m.BalanceForTMinus1 = 1440
+	m.BalanceSolo = 1440
 	m.IDT0 = testIDT0
 	m.IDTMinus1 = testIDTMinus1
 
@@ -724,11 +800,33 @@ func testNegativeMiningT1minusSlashingSoloMining(t *testing.T) {
 	require.NotNil(t, m)
 
 	require.EqualValues(t, 0, m.SlashingRateSolo)
-	require.EqualValues(t, 6, m.SlashingRateForTMinus1)
-	require.EqualValues(t, -6, pendingAmountForTMinus1)
+	require.EqualValues(t, 0, m.SlashingRateForTMinus1)
+	require.EqualValues(t, 0, pendingAmountForTMinus1)
 	require.EqualValues(t, 0, pendingAmountForT0)
 	require.EqualValues(t, 0, m.BalanceForT0)
-	require.EqualValues(t, 1434, m.BalanceForTMinus1)
+	require.EqualValues(t, 1440, m.BalanceForTMinus1)
+	require.False(t, IDT0Changed)
+	require.EqualValues(t, 0, m.IDT0)
+	require.EqualValues(t, 0, m.IDTMinus1)
+
+	m.BalanceLastUpdatedAt = timeDelta(-24 * stdlibtime.Hour)
+	m.MiningSessionSoloStartedAt = timeDelta(-192 * stdlibtime.Hour)
+	m.MiningSessionSoloEndedAt = timeDelta(-168 * stdlibtime.Hour)
+
+	ref.MiningSessionSoloStartedAt = timeDelta(-216 * stdlibtime.Hour)
+	ref.MiningSessionSoloEndedAt = timeDelta(-192 * stdlibtime.Hour)
+	m.IDT0 = testIDT0
+	m.IDTMinus1 = testIDTMinus1
+
+	m, _, IDT0Changed, pendingAmountForTMinus1, pendingAmountForT0 = mine(testMiningBase, testTime, m, nil, ref)
+	require.NotNil(t, m)
+
+	require.EqualValues(t, 6.066666666666666, m.SlashingRateSolo)
+	require.EqualValues(t, 6, m.SlashingRateForTMinus1)
+	require.EqualValues(t, -144, pendingAmountForTMinus1)
+	require.EqualValues(t, 0, pendingAmountForT0)
+	require.EqualValues(t, 0, m.BalanceForT0)
+	require.EqualValues(t, 1296, m.BalanceForTMinus1)
 	require.False(t, IDT0Changed)
 	require.EqualValues(t, 0, m.IDT0)
 	require.EqualValues(t, 0, m.IDTMinus1)
@@ -1128,9 +1226,9 @@ func Test_MinerPendingSlashing(t *testing.T) {
 
 func testMinerPendingSlashingSolo_BonusPrizeCase(t *testing.T) {
 	m := newUser()
-	m.BalanceLastUpdatedAt = timeDelta(-3 * stdlibtime.Hour)
-	m.MiningSessionSoloStartedAt = timeDelta(-28 * stdlibtime.Hour)
-	m.MiningSessionSoloEndedAt = timeDelta(-3 * stdlibtime.Hour)
+	m.BalanceLastUpdatedAt = timeDelta(-23 * stdlibtime.Hour)
+	m.MiningSessionSoloStartedAt = timeDelta(-192 * stdlibtime.Hour)
+	m.MiningSessionSoloEndedAt = timeDelta(-192 * stdlibtime.Hour)
 	m.BalanceSolo = 1440
 	m.BalanceT0 = 1440
 	m.BalanceForT0 = 1440
@@ -1139,8 +1237,8 @@ func testMinerPendingSlashingSolo_BonusPrizeCase(t *testing.T) {
 	m.IDT0 = testIDT0
 
 	ref := newRef()
-	ref.MiningSessionSoloStartedAt = timeDelta(-25 * stdlibtime.Hour)
-	ref.MiningSessionSoloEndedAt = timeDelta(-stdlibtime.Hour)
+	ref.MiningSessionSoloStartedAt = timeDelta(-192 * stdlibtime.Hour)
+	ref.MiningSessionSoloEndedAt = timeDelta(-168 * stdlibtime.Hour)
 
 	m, _, IDT0Changed, pendingAmountForTMinus1, pendingAmountForT0 := mine(testMiningBase, time.New(testTime.Add(-2*stdlibtime.Hour)), m, nil, nil)
 	require.NotNil(t, m)
@@ -1151,7 +1249,7 @@ func testMinerPendingSlashingSolo_BonusPrizeCase(t *testing.T) {
 	require.EqualValues(t, 0, m.SlashingRateForT0)
 	require.EqualValues(t, 0, pendingAmountForTMinus1)
 	require.EqualValues(t, 0, pendingAmountForT0)
-	require.EqualValues(t, 1434, m.BalanceSolo)
+	require.EqualValues(t, 1314, m.BalanceSolo)
 	require.EqualValues(t, 1440, m.BalanceT0)
 	require.EqualValues(t, 1440, m.BalanceT1)
 	require.EqualValues(t, 1440, m.BalanceT2)
@@ -1166,7 +1264,7 @@ func testMinerPendingSlashingSolo_BonusPrizeCase(t *testing.T) {
 	m.BalanceSoloPending += 5000
 	m, _, IDT0Changed, pendingAmountForTMinus1, pendingAmountForT0 = mine(testMiningBase, time.New(testTime.Add(-2*stdlibtime.Hour)), m, nil, nil)
 	require.NotNil(t, m)
-	require.EqualValues(t, 6434, m.BalanceSolo)
+	require.EqualValues(t, 6314, m.BalanceSolo)
 	require.EqualValues(t, 26.833333333333332, m.SlashingRateSolo)
 	require.EqualValues(t, 1440, m.BalanceT0)
 	require.EqualValues(t, 0, m.SlashingRateT0)
@@ -1188,7 +1286,7 @@ func testMinerPendingSlashingSolo_BonusPrizeCase(t *testing.T) {
 
 	m, _, IDT0Changed, pendingAmountForTMinus1, pendingAmountForT0 = mine(testMiningBase, time.New(testTime.Add(-1*stdlibtime.Hour)), m, nil, nil)
 	require.NotNil(t, m)
-	require.EqualValues(t, 6407.166666666667, m.BalanceSolo)
+	require.EqualValues(t, 6287.166666666667, m.BalanceSolo)
 	require.EqualValues(t, 26.833333333333332, m.SlashingRateSolo)
 
 	require.EqualValues(t, 1440, m.BalanceT0)
@@ -1213,7 +1311,7 @@ func testMinerPendingSlashingSolo_BonusPrizeCase(t *testing.T) {
 	m.BalanceSoloPendingApplied = 5000.
 	m, _, IDT0Changed, pendingAmountForTMinus1, pendingAmountForT0 = mine(testMiningBase, testTime, m, nil, nil)
 	require.NotNil(t, m)
-	require.EqualValues(t, 6380.333333333334, m.BalanceSolo)
+	require.EqualValues(t, 6260.333333333334, m.BalanceSolo)
 	require.EqualValues(t, 26.833333333333332, m.SlashingRateSolo)
 
 	require.EqualValues(t, 1440, m.BalanceT0)
@@ -1242,15 +1340,15 @@ func testMinerPendingSlashingT1_Decrease(t *testing.T) {
 	m.BalanceSolo = 1440
 	m.BalanceT1 = 1440
 	m.BalanceForT0 = 1440
-	m.BalanceLastUpdatedAt = timeDelta(-3 * stdlibtime.Hour)
-	m.MiningSessionSoloStartedAt = timeDelta(-28 * stdlibtime.Hour)
-	m.MiningSessionSoloEndedAt = timeDelta(-3 * stdlibtime.Hour)
+	m.BalanceLastUpdatedAt = timeDelta(-189 * stdlibtime.Hour)
+	m.MiningSessionSoloStartedAt = timeDelta(-192 * stdlibtime.Hour)
+	m.MiningSessionSoloEndedAt = timeDelta(-168 * stdlibtime.Hour)
 	m.IDT0 = testIDT0
 	m.IDTMinus1 = testIDTMinus1
 
 	m, _, IDT0Changed, pendingAmountForTMinus1, pendingAmountForT0 := mine(testMiningBase, time.New(testTime.Add(-2*stdlibtime.Hour)), m, nil, nil)
 	require.NotNil(t, m)
-	require.EqualValues(t, 1434., m.BalanceSolo)
+	require.EqualValues(t, 1440., m.BalanceSolo)
 	require.EqualValues(t, 1440., m.BalanceT1)
 	require.EqualValues(t, 0., m.BalanceT1Pending)
 	require.EqualValues(t, 0., m.BalanceT1PendingApplied)
@@ -1266,8 +1364,8 @@ func testMinerPendingSlashingT1_Decrease(t *testing.T) {
 	m.BalanceT1Pending -= 1000
 	m, _, IDT0Changed, pendingAmountForTMinus1, pendingAmountForT0 = mine(testMiningBase, time.New(testTime.Add(-2*stdlibtime.Hour)), m, nil, nil)
 	require.NotNil(t, m)
-	require.EqualValues(t, 1434., m.BalanceSolo)
-	require.EqualValues(t, 6, m.SlashingRateSolo)
+	require.EqualValues(t, 1440., m.BalanceSolo)
+	require.EqualValues(t, 0, m.SlashingRateSolo)
 	require.EqualValues(t, 0, pendingAmountForTMinus1)
 	require.EqualValues(t, 0, pendingAmountForT0)
 	require.EqualValues(t, 440, m.BalanceT1)
@@ -1283,8 +1381,8 @@ func testMinerPendingSlashingT1_Decrease(t *testing.T) {
 
 	m, _, IDT0Changed, pendingAmountForTMinus1, pendingAmountForT0 = mine(testMiningBase, time.New(testTime.Add(-1*stdlibtime.Hour)), m, nil, nil)
 	require.NotNil(t, m)
-	require.EqualValues(t, 1428., m.BalanceSolo)
-	require.EqualValues(t, 6, m.SlashingRateSolo)
+	require.EqualValues(t, 1440., m.BalanceSolo)
+	require.EqualValues(t, 0, m.SlashingRateSolo)
 	require.EqualValues(t, 0, pendingAmountForTMinus1)
 	require.EqualValues(t, 0, pendingAmountForT0)
 	require.EqualValues(t, 440, m.BalanceT1)
@@ -1301,7 +1399,7 @@ func testMinerPendingSlashingT1_Decrease(t *testing.T) {
 	m.BalanceT1Pending = -1000
 	m, _, IDT0Changed, pendingAmountForTMinus1, pendingAmountForT0 = mine(testMiningBase, testTime, m, nil, nil)
 	require.NotNil(t, m)
-	require.EqualValues(t, 1422, m.BalanceSolo)
+	require.EqualValues(t, 1434, m.BalanceSolo)
 	require.EqualValues(t, 6, m.SlashingRateSolo)
 	require.EqualValues(t, 0, pendingAmountForTMinus1)
 	require.EqualValues(t, 0, pendingAmountForT0)
@@ -1322,9 +1420,9 @@ func testMinerPendingSlashingT2_Decrease(t *testing.T) {
 	m := newUser()
 	m.BalanceSolo = 1440
 	m.BalanceT2 = 1440
-	m.BalanceLastUpdatedAt = timeDelta(-3 * stdlibtime.Hour)
-	m.MiningSessionSoloStartedAt = timeDelta(-28 * stdlibtime.Hour)
-	m.MiningSessionSoloEndedAt = timeDelta(-3 * stdlibtime.Hour)
+	m.BalanceLastUpdatedAt = timeDelta(-189 * stdlibtime.Hour)
+	m.MiningSessionSoloStartedAt = timeDelta(-192 * stdlibtime.Hour)
+	m.MiningSessionSoloEndedAt = timeDelta(-168 * stdlibtime.Hour)
 	m.BalanceForT0 = 1440
 	m.BalanceForTMinus1 = 1440
 	m.IDT0 = testIDT0
@@ -1332,7 +1430,7 @@ func testMinerPendingSlashingT2_Decrease(t *testing.T) {
 
 	m, _, IDT0Changed, pendingAmountForTMinus1, pendingAmountForT0 := mine(testMiningBase, time.New(testTime.Add(-2*stdlibtime.Hour)), m, nil, nil)
 	require.NotNil(t, m)
-	require.EqualValues(t, 1434., m.BalanceSolo)
+	require.EqualValues(t, 1440., m.BalanceSolo)
 	require.EqualValues(t, 1440, m.BalanceT2)
 	require.EqualValues(t, 0., m.BalanceT2Pending)
 	require.EqualValues(t, 0., m.BalanceT2PendingApplied)
@@ -1348,7 +1446,7 @@ func testMinerPendingSlashingT2_Decrease(t *testing.T) {
 	m.BalanceT2Pending -= 1000
 	m, _, IDT0Changed, pendingAmountForTMinus1, pendingAmountForT0 = mine(testMiningBase, time.New(testTime.Add(-2*stdlibtime.Hour)), m, nil, nil)
 	require.NotNil(t, m)
-	require.EqualValues(t, 1434., m.BalanceSolo)
+	require.EqualValues(t, 1440., m.BalanceSolo)
 	require.EqualValues(t, 440, m.BalanceT2)
 	require.EqualValues(t, -1000., m.BalanceT2Pending)
 	require.EqualValues(t, -1000., m.BalanceT2PendingApplied)
@@ -1363,7 +1461,7 @@ func testMinerPendingSlashingT2_Decrease(t *testing.T) {
 
 	m, _, IDT0Changed, pendingAmountForTMinus1, pendingAmountForT0 = mine(testMiningBase, time.New(testTime.Add(-1*stdlibtime.Hour)), m, nil, nil)
 	require.NotNil(t, m)
-	require.EqualValues(t, 1428., m.BalanceSolo)
+	require.EqualValues(t, 1440., m.BalanceSolo)
 	require.EqualValues(t, 440, m.BalanceT2)
 	require.EqualValues(t, 0., m.BalanceT2Pending)
 	require.EqualValues(t, 0., m.BalanceT2PendingApplied)
@@ -1380,7 +1478,7 @@ func testMinerPendingSlashingT2_Decrease(t *testing.T) {
 	m.BalanceT2Pending = -1000.
 	m, _, IDT0Changed, pendingAmountForTMinus1, pendingAmountForT0 = mine(testMiningBase, testTime, m, nil, nil)
 	require.NotNil(t, m)
-	require.EqualValues(t, 1422, m.BalanceSolo)
+	require.EqualValues(t, 1434, m.BalanceSolo)
 	require.EqualValues(t, 440, m.BalanceT2)
 	require.EqualValues(t, 0., m.BalanceT2Pending)
 	require.EqualValues(t, 0., m.BalanceT2PendingApplied)
@@ -1410,15 +1508,15 @@ func testT0NotChanged(t *testing.T) {
 	m.BalanceT2 = 1440
 	m.BalanceForT0 = 1440
 	m.BalanceForTMinus1 = 1440
-	m.BalanceLastUpdatedAt = timeDelta(-3 * stdlibtime.Hour)
-	m.MiningSessionSoloStartedAt = timeDelta(-28 * stdlibtime.Hour)
-	m.MiningSessionSoloEndedAt = timeDelta(-3 * stdlibtime.Hour)
+	m.BalanceLastUpdatedAt = timeDelta(-189 * stdlibtime.Hour)
+	m.MiningSessionSoloStartedAt = timeDelta(-189 * stdlibtime.Hour)
+	m.MiningSessionSoloEndedAt = timeDelta(-189 * stdlibtime.Hour)
 	m.IDT0 = testIDT0
 	m.IDTMinus1 = testIDTMinus1
 
 	m, _, IDT0Changed, pendingAmountForTMinus1, pendingAmountForT0 := mine(testMiningBase, time.New(testTime.Add(-2*stdlibtime.Hour)), m, nil, nil)
 	require.NotNil(t, m)
-	require.EqualValues(t, 1434., m.BalanceSolo)
+	require.EqualValues(t, 318., m.BalanceSolo)
 	require.EqualValues(t, 1440, m.BalanceT2)
 	require.EqualValues(t, 0., m.BalanceT2Pending)
 	require.EqualValues(t, 0., m.BalanceT2PendingApplied)
@@ -1440,15 +1538,15 @@ func testT0Changed(t *testing.T) {
 	m.BalanceT2 = 1440
 	m.BalanceForT0 = 1440
 	m.BalanceForTMinus1 = 1440
-	m.BalanceLastUpdatedAt = timeDelta(-3 * stdlibtime.Hour)
-	m.MiningSessionSoloStartedAt = timeDelta(-28 * stdlibtime.Hour)
-	m.MiningSessionSoloEndedAt = timeDelta(-3 * stdlibtime.Hour)
+	m.BalanceLastUpdatedAt = timeDelta(-189 * stdlibtime.Hour)
+	m.MiningSessionSoloStartedAt = timeDelta(-192 * stdlibtime.Hour)
+	m.MiningSessionSoloEndedAt = timeDelta(-189 * stdlibtime.Hour)
 	m.IDT0 = -testIDT0
 	m.IDTMinus1 = -testIDTMinus1
 
 	m, _, IDT0Changed, pendingAmountForTMinus1, pendingAmountForT0 := mine(testMiningBase, time.New(testTime.Add(-2*stdlibtime.Hour)), m, nil, nil)
 	require.NotNil(t, m)
-	require.EqualValues(t, 1434., m.BalanceSolo)
+	require.EqualValues(t, 318., m.BalanceSolo)
 	require.EqualValues(t, 1440, m.BalanceT2)
 	require.EqualValues(t, 0., m.BalanceT2Pending)
 	require.EqualValues(t, 0., m.BalanceT2PendingApplied)
@@ -1470,15 +1568,15 @@ func testOnlyTMinus1Changed(t *testing.T) {
 	m.BalanceT2 = 1440
 	m.BalanceForT0 = 1440
 	m.BalanceForTMinus1 = 1440
-	m.BalanceLastUpdatedAt = timeDelta(-3 * stdlibtime.Hour)
-	m.MiningSessionSoloStartedAt = timeDelta(-28 * stdlibtime.Hour)
-	m.MiningSessionSoloEndedAt = timeDelta(-3 * stdlibtime.Hour)
+	m.BalanceLastUpdatedAt = timeDelta(-189 * stdlibtime.Hour)
+	m.MiningSessionSoloStartedAt = timeDelta(-192 * stdlibtime.Hour)
+	m.MiningSessionSoloEndedAt = timeDelta(-189 * stdlibtime.Hour)
 	m.IDT0 = testIDT0
 	m.IDTMinus1 = -testIDTMinus1
 
 	m, _, IDT0Changed, pendingAmountForTMinus1, pendingAmountForT0 := mine(testMiningBase, time.New(testTime.Add(-2*stdlibtime.Hour)), m, nil, nil)
 	require.NotNil(t, m)
-	require.EqualValues(t, 1434., m.BalanceSolo)
+	require.EqualValues(t, 318., m.BalanceSolo)
 	require.EqualValues(t, 1440, m.BalanceT2)
 	require.EqualValues(t, 0., m.BalanceT2Pending)
 	require.EqualValues(t, 0., m.BalanceT2PendingApplied)

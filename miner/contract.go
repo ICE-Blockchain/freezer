@@ -193,10 +193,12 @@ type (
 			Min stdlibtime.Duration `yaml:"min"`
 			Max stdlibtime.Duration `yaml:"max"`
 		} `yaml:"ethereumDistributionFrequency" mapstructure:"ethereumDistributionFrequency"`
-		MainnetRewardPoolContributionEthAddress string  `yaml:"mainnetRewardPoolContributionEthAddress" mapstructure:"mainnetRewardPoolContributionEthAddress"`
-		MainnetRewardPoolContributionPercentage float64 `yaml:"mainnetRewardPoolContributionPercentage" mapstructure:"mainnetRewardPoolContributionPercentage"`
-		Workers                                 int64   `yaml:"workers"`
-		BatchSize                               int64   `yaml:"batchSize"`
-		Development                             bool    `yaml:"development"`
+		SlashingStartInterval                   stdlibtime.Duration `yaml:"slashingStartInterval"`
+		MainnetRewardPoolContributionEthAddress string              `yaml:"mainnetRewardPoolContributionEthAddress" mapstructure:"mainnetRewardPoolContributionEthAddress"`
+		MainnetRewardPoolContributionPercentage float64             `yaml:"mainnetRewardPoolContributionPercentage" mapstructure:"mainnetRewardPoolContributionPercentage"`
+		Workers                                 int64               `yaml:"workers"`
+		BatchSize                               int64               `yaml:"batchSize"`
+		SlashingDaysCount                       int64               `yaml:"slashingDaysCount"`
+		Development                             bool                `yaml:"development"`
 	}
 )

@@ -186,6 +186,8 @@ miner:
   wintr/connectors/storage/v2: *db
   mainnetRewardPoolContributionPercentage: 0.3
   mainnetRewardPoolContributionEthAddress: bogus
+  slashingStartInterval: 1m
+  slashingDaysCount: 10
 kyc/quiz:
   maxResetCount: 0
   maxAttemptsAllowed: 3
