@@ -112,6 +112,7 @@ tokenomics: &tokenomics
     t0: 25
     t1: 25
     t2: 5
+  t1LimitCount: 2
   rollbackNegativeMining:
     available:
       after: 5m
@@ -188,6 +189,7 @@ miner:
   mainnetRewardPoolContributionEthAddress: bogus
   slashingStartInterval: 1m
   slashingDaysCount: 10
+  t1LimitCount: 2
 kyc/quiz:
   maxResetCount: 0
   maxAttemptsAllowed: 3

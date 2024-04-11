@@ -382,5 +382,6 @@ type (
 		DetailedCoinMetrics struct {
 			RefreshInterval stdlibtime.Duration `yaml:"refresh-interval" mapstructure:"refresh-interval"`
 		} `yaml:"detailed-coin-metrics" mapstructure:"detailed-coin-metrics"`
+		T1LimitCount int32 `yaml:"t1LimitCount"`
 	}
 )

@@ -132,6 +132,7 @@ tokenomics: &tokenomics
       - 20
   detailed-coin-metrics:
     refresh-interval: 10m
+  t1LimitCount: 2
 tokenomics_test:
   <<: *tokenomics
   messageBroker:

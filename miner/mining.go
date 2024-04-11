@@ -111,7 +111,11 @@ func mine(baseMiningRate float64, now *time.Time, usr *user, t0Ref, tMinus1Ref *
 		if updatedUser.ActiveT2Referrals < 0 {
 			updatedUser.ActiveT2Referrals = 0
 		}
-		t1Rate := (25 * float64(updatedUser.ActiveT1Referrals)) * baseMiningRate * elapsedTimeFraction / 100
+		activeT1Referrals := updatedUser.ActiveT1Referrals
+		if cfg.T1LimitCount != 0 && activeT1Referrals > cfg.T1LimitCount {
+			activeT1Referrals = cfg.T1LimitCount
+		}
+		t1Rate := (25 * float64(activeT1Referrals)) * baseMiningRate * elapsedTimeFraction / 100
 		t2Rate := (5 * float64(updatedUser.ActiveT2Referrals)) * baseMiningRate * elapsedTimeFraction / 100
 		updatedUser.BalanceT1 += t1Rate
 		updatedUser.BalanceT2 += t2Rate

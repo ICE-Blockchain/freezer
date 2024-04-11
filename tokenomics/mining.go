@@ -292,6 +292,9 @@ func (r *repository) calculateMiningRateSummaries(
 	if t1 < 0 {
 		t1 = 0
 	}
+	if r.cfg.T1LimitCount != 0 && t1 > r.cfg.T1LimitCount {
+		t1 = r.cfg.T1LimitCount
+	}
 	if t2 < 0 {
 		t2 = 0
 	}
