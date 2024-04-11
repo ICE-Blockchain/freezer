@@ -318,8 +318,10 @@ func (m *miner) mine(ctx context.Context, workerNumber int64) {
 		******************************************************************************************************************************************************/
 
 		for _, ref := range referralResults {
-			if _, found := tMinus1Referrals[ref.ID]; found {
-				tMinus1Referrals[ref.ID] = ref
+			if !isAdvancedTeamDisabled(ref.LatestDevice) {
+				if _, found := tMinus1Referrals[ref.ID]; found {
+					tMinus1Referrals[ref.ID] = ref
+				}
 			}
 			if _, found := t0Referrals[ref.ID]; found {
 				t0Referrals[ref.ID] = ref

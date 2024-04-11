@@ -150,6 +150,7 @@ type (
 		model.BalanceT2EthereumField
 		model.PreStakingAllocationField
 		model.PreStakingBonusField
+		model.LatestDeviceField
 	}
 
 	referralCountGuardUpdatedUser struct {
