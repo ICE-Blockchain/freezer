@@ -238,8 +238,6 @@ func updateT0AndTMinus1ReferralsForUserHasNeverMined(usr *user) (updatedUser *re
 func (u *user) isAbsoluteZero() bool {
 	return u.BalanceSolo == 0 &&
 		u.BalanceT0 == 0 &&
-		u.BalanceT1 == 0 &&
-		u.BalanceT2 == 0 &&
 		u.BalanceSoloPending-u.BalanceSoloPendingApplied == 0 &&
 		u.BalanceForT0 == 0 &&
 		u.BalanceForTMinus1 == 0
