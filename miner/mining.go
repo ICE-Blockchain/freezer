@@ -24,6 +24,14 @@ func mine(baseMiningRate float64, now *time.Time, usr *user, t0Ref, tMinus1Ref *
 
 			return updatedUser, false, IDT0Changed, 0, 0
 		}
+		if updatedUser.BalanceT1 > 0 || updatedUser.BalanceT2 > 0 {
+			updatedUser.BalanceTotalStandard, updatedUser.BalanceTotalPreStaking = 0, 0
+			updatedUser.BalanceT1 = 0
+			updatedUser.BalanceT2 = 0
+			updatedUser.BalanceLastUpdatedAt = now
+
+			return updatedUser, false, IDT0Changed, 0, 0
+		}
 
 		return nil, false, IDT0Changed, 0, 0
 	}
