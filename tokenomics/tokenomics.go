@@ -60,10 +60,12 @@ func New(ctx context.Context, _ context.CancelFunc) Repository {
 func StartProcessor(ctx context.Context, cancel context.CancelFunc) Processor {
 	var cfg Config
 	appCfg.MustLoadFromKey(applicationYamlKey, &cfg)
+	dwhClient := dwh.MustConnect(ctx, applicationYamlKey)
 	prc := &processor{repository: &repository{
 		cfg:           &cfg,
 		db:            storage.MustConnect(context.Background(), applicationYamlKey),
 		mb:            messagebroker.MustConnect(context.Background(), applicationYamlKey),
+		dwh:           dwhClient,
 		pictureClient: picture.New(applicationYamlKey),
 	}}
 	//nolint:contextcheck // It's intended. Cuz we want to close everything gracefully.
@@ -74,7 +76,9 @@ func StartProcessor(ctx context.Context, cancel context.CancelFunc) Processor {
 		&viewedNewsSource{processor: prc},
 		&deviceMetadataTableSource{processor: prc},
 	)
-	prc.shutdown = closeAll(mbConsumer, prc.mb, prc.db)
+	prc.shutdown = closeAll(mbConsumer, prc.mb, prc.db, func() error {
+		return prc.dwh.Close()
+	})
 
 	go prc.startDisableAdvancedTeamCfgSyncer(ctx)
 	go prc.startKYCConfigJSONSyncer(ctx)

@@ -575,7 +575,7 @@ func (db *db) SelectTotalCoins(ctx context.Context, createdAts []stdlibtime.Time
 		createdAtArray = append(createdAtArray, format[0:len(format)-1])
 	}
 	if err := db.pools[atomic.AddUint64(&db.currentIndex, 1)%uint64(len(db.pools))].Do(ctx, ch.Query{
-		Body: fmt.Sprintf(selectTotalCoinsSQL, tableName, strings.Join(createdAtArray, "','"), users.LivenessDetectionKYCStep),
+		Body: fmt.Sprintf(selectTotalCoinsSQL, tableName, strings.Join(createdAtArray, "','"), users.NoneKYCStep),
 		Result: append(make(proto.Results, 0, 4),
 			proto.ResultColumn{Name: "created_at", Data: &createdAt},
 			proto.ResultColumn{Name: "balance_total_standard", Data: &balanceTotalStandard},
@@ -630,6 +630,17 @@ func (db *db) SelectTotalCoins(ctx context.Context, createdAts []stdlibtime.Time
 	res = dedupedRes
 
 	return res, nil
+}
+
+func (db *db) DeleteUserInfo(ctx context.Context, id int64) error {
+	return db.pools[atomic.AddUint64(&db.currentIndex, 1)%uint64(len(db.pools))].Do(ctx, ch.Query{
+		Body: fmt.Sprintf(`DELETE FROM %[1]v WHERE id = %[2]v`, tableName, id),
+		OnResult: func(_ context.Context, block proto.Block) error {
+			return nil
+		},
+		Secret:      "",
+		InitialUser: "",
+	})
 }
 
 func (t *TotalCoins) Key() string {

@@ -148,12 +148,13 @@ func (s *usersTableSource) deleteUser(ctx context.Context, usr *users.User) erro
 	if err != nil {
 		return errors.Wrapf(err, "failed to delete userID:%v,id:%v", usr.ID, id)
 	}
-	errs := make([]error, 0, len(results))
+	errs := make([]error, 0, len(results)+1)
 	for _, result := range results {
 		if err = result.Err(); err != nil {
 			errs = append(errs, errors.Wrapf(err, "failed to run `%#v`", result.FullName()))
 		}
 	}
+	errs = append(errs, errors.Wrapf(s.dwh.DeleteUserInfo(ctx, id), "failed to delete clickhouse information for user id:%v,id:%v", usr.ID, id))
 
 	return errors.Wrapf(multierror.Append(nil, errs...).ErrorOrNil(), "failed to delete userID:%v,id:%v", usr.ID, id)
 }
