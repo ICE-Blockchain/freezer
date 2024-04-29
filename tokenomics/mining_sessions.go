@@ -13,6 +13,7 @@ import (
 	"github.com/redis/go-redis/v9"
 
 	"github.com/ice-blockchain/eskimo/users"
+	extrabonusnotifier "github.com/ice-blockchain/freezer/extra-bonus-notifier"
 	"github.com/ice-blockchain/freezer/model"
 	messagebroker "github.com/ice-blockchain/wintr/connectors/message_broker"
 	"github.com/ice-blockchain/wintr/connectors/storage/v3"
@@ -47,6 +48,9 @@ type (
 		model.IDTMinus1Field
 		model.PreStakingAllocationField
 		model.PreStakingBonusField
+		model.ExtraBonusDaysClaimNotAvailableField
+		model.ExtraBonusLastClaimAvailableAtField
+		model.ExtraBonusStartedAtField
 	}
 )
 
@@ -88,6 +92,14 @@ func (r *repository) StartNewMiningSession( //nolint:funlen,gocognit // A lot of
 	}
 	if err = r.updateTMinus1(ctx, id, old[0].IDT0, old[0].IDTMinus1); err != nil {
 		return errors.Wrapf(err, "failed to updateTMinus1 for id:%v", id)
+	}
+	if old[0].KYCStepPassed >= users.QuizKYCStep {
+		var extraBonusIndex uint16
+		if _, isClaimable := extrabonusnotifier.IsExtraBonusAvailable(now, r.extraBonusStartDate, old[0].ExtraBonusStartedAt, r.extraBonusIndicesDistribution, id, int16(old[0].UTCOffset), &extraBonusIndex, &old[0].ExtraBonusDaysClaimNotAvailable, &old[0].ExtraBonusLastClaimAvailableAt); isClaimable {
+			if err := r.ClaimExtraBonus(ctx, &ExtraBonusSummary{UserID: userID}); err != nil {
+				return errors.Wrapf(err, "failed to ClaimExtraBonus for:%v", userID)
+			}
+		}
 	}
 	newMS, extension := r.newStartOrExtendMiningSession(&old[0].StartOrExtendMiningSession, now)
 	newMS.ID = id

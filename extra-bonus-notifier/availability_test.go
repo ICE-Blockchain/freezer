@@ -39,9 +39,57 @@ func generateExtraBonusIndicesDistributionFromMap(totalChunkNumber uint16, m map
 	return result
 }
 
-func Test_isExtraBonusAvailable(t *testing.T) {
-	t.Skip("extra bonus disabled")
+func Test_isExtraBonusAvailable_StaticBonusValue(t *testing.T) {
 	t.Parallel()
+
+	weekAgo := testTime.Add(-stdlibtime.Hour * 24 * 7)
+	ExtraBonusStartDate := time.New(stdlibtime.Date(weekAgo.Year(), weekAgo.Month(), weekAgo.Day(), 00, 00, 00, 00, weekAgo.Location()))
+
+	t.Run("current time before extraBonusStartedAt + duration", func(t *testing.T) {
+		now := time.New(stdlibtime.Date(testTime.Year(), testTime.Month(), testTime.Day(), 6, 00, 00, 00, testTime.Location()))
+
+		m := newUser()
+		m.UTCOffset = 180
+		m.ExtraBonusLastClaimAvailableAt = time.New(now.Add(-stdlibtime.Hour * 24))
+		extraBonusStartedAt := time.Now()
+
+		b, c := IsExtraBonusAvailable(now, ExtraBonusStartDate, extraBonusStartedAt, nil, m.ID, int16(m.UTCOffset), &m.ExtraBonusIndex, &m.ExtraBonusDaysClaimNotAvailable, &m.ExtraBonusLastClaimAvailableAt)
+		require.False(t, b)
+		require.False(t, c)
+		require.EqualValues(t, 0, m.ExtraBonusIndex)
+	})
+
+	t.Run("current time after extraBonusStartedAt + duration", func(t *testing.T) {
+		now := time.New(stdlibtime.Date(testTime.Year(), testTime.Month(), testTime.Day(), 6, 00, 00, 00, testTime.Location()))
+
+		m := newUser()
+		m.UTCOffset = 180
+		m.ExtraBonusLastClaimAvailableAt = time.New(now.Add(-stdlibtime.Hour * 24))
+		extraBonusStartedAt := time.New(now.Add(-48 * stdlibtime.Hour))
+
+		b, c := IsExtraBonusAvailable(now, ExtraBonusStartDate, extraBonusStartedAt, nil, m.ID, int16(m.UTCOffset), &m.ExtraBonusIndex, &m.ExtraBonusDaysClaimNotAvailable, &m.ExtraBonusLastClaimAvailableAt)
+		require.True(t, b)
+		require.True(t, c)
+		require.EqualValues(t, 0, m.ExtraBonusIndex)
+	})
+
+	t.Run("extraBonusStartedAt is nil", func(t *testing.T) {
+		now := time.New(stdlibtime.Date(testTime.Year(), testTime.Month(), testTime.Day(), 6, 00, 00, 00, testTime.Location()))
+
+		m := newUser()
+		m.UTCOffset = 180
+		m.ExtraBonusLastClaimAvailableAt = time.New(now.Add(-stdlibtime.Hour * 24))
+
+		b, c := IsExtraBonusAvailable(now, ExtraBonusStartDate, nil, nil, m.ID, int16(m.UTCOffset), &m.ExtraBonusIndex, &m.ExtraBonusDaysClaimNotAvailable, &m.ExtraBonusLastClaimAvailableAt)
+		require.True(t, b)
+		require.True(t, c)
+		require.EqualValues(t, 0, m.ExtraBonusIndex)
+	})
+}
+
+func Test_isExtraBonusAvailable(t *testing.T) {
+	t.Parallel()
+	t.Skip()
 
 	weekAgo := testTime.Add(-stdlibtime.Hour * 24 * 7)
 	ExtraBonusStartedAt := time.New(stdlibtime.Date(weekAgo.Year(), weekAgo.Month(), weekAgo.Day(), 00, 00, 00, 00, weekAgo.Location()))

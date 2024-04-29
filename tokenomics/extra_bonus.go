@@ -87,14 +87,22 @@ func (r *repository) getAvailableExtraBonus(
 		extraBonusIndex     uint16
 		extraBonus          float64
 		calculateExtraBonus = func() float64 {
-			return extrabonusnotifier.CalculateExtraBonus(newsSeenField.NewsSeen, extraBonusDaysClaimNotAvailableField.ExtraBonusDaysClaimNotAvailable, extraBonusIndex-1, now, extraBonusLastClaimAvailableAtField.ExtraBonusLastClaimAvailableAt, miningSessionSoloStartedAtField.MiningSessionSoloStartedAt, miningSessionSoloEndedAtField.MiningSessionSoloEndedAt) //nolint:lll // .
+			if false {
+				return extrabonusnotifier.CalculateExtraBonus(newsSeenField.NewsSeen, extraBonusDaysClaimNotAvailableField.ExtraBonusDaysClaimNotAvailable, extraBonusIndex-1, now, extraBonusLastClaimAvailableAtField.ExtraBonusLastClaimAvailableAt, miningSessionSoloStartedAtField.MiningSessionSoloStartedAt, miningSessionSoloEndedAtField.MiningSessionSoloEndedAt) //nolint:lll // .
+			}
+
+			return r.cfg.ExtraBonuses.KycPassedExtraBonus
 		}
 	)
-	if !extraBonusStartedAtField.ExtraBonusStartedAt.IsNil() &&
+	if false && !extraBonusStartedAtField.ExtraBonusStartedAt.IsNil() &&
 		now.After(*extraBonusLastClaimAvailableAtField.ExtraBonusLastClaimAvailableAt.Time) &&
 		extraBonusStartedAtField.ExtraBonusStartedAt.After(*extraBonusLastClaimAvailableAtField.ExtraBonusLastClaimAvailableAt.Time) &&
 		extraBonusStartedAtField.ExtraBonusStartedAt.Before(extraBonusLastClaimAvailableAtField.ExtraBonusLastClaimAvailableAt.Add(r.cfg.ExtraBonuses.ClaimWindow)) &&
 		now.Before(extraBonusLastClaimAvailableAtField.ExtraBonusLastClaimAvailableAt.Add(r.cfg.ExtraBonuses.ClaimWindow)) {
+		return nil, ErrDuplicate
+	}
+	if !extraBonusStartedAtField.ExtraBonusStartedAt.IsNil() &&
+		now.Before(extraBonusStartedAtField.ExtraBonusStartedAt.Add(r.cfg.ExtraBonuses.Duration)) {
 		return nil, ErrDuplicate
 	}
 	if bonusAvailable, bonusClaimable := extrabonusnotifier.IsExtraBonusAvailable(now, r.extraBonusStartDate, extraBonusStartedAtField.ExtraBonusStartedAt, r.extraBonusIndicesDistribution, id, int16(utcOffsetField.UTCOffset), &extraBonusIndex, &extraBonusDaysClaimNotAvailableField.ExtraBonusDaysClaimNotAvailable, &extraBonusLastClaimAvailableAtField.ExtraBonusLastClaimAvailableAt); bonusAvailable { //nolint:lll // .

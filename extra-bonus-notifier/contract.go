@@ -40,6 +40,7 @@ type (
 			DelayedClaimPenaltyWindow stdlibtime.Duration `yaml:"delayedClaimPenaltyWindow"`
 			AvailabilityWindow        stdlibtime.Duration `yaml:"availabilityWindow"`
 			TimeToAvailabilityWindow  stdlibtime.Duration `yaml:"timeToAvailabilityWindow"`
+			KycPassedExtraBonus       float64             `yaml:"kycPassedExtraBonus"`
 		} `yaml:"extraBonuses"`
 	}
 )
