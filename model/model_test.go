@@ -346,7 +346,7 @@ func TestKYCStepPassedCorrectly(t *testing.T) {
 			KYCStepsCreatedAtField:     KYCStepsCreatedAtField{KYCStepsCreatedAt: &TimeSlice{time.Now(), time.Now(), time.Now(), time.Now()}},
 			KYCStepsLastUpdatedAtField: KYCStepsLastUpdatedAtField{KYCStepsLastUpdatedAt: &TimeSlice{time.Now(), time.Now(), time.Now(), time.Now()}},
 		}
-		assert.Equal(t, true, kycState.KYCStepPassedCorrectly(users.QuizKYCStep))
+		assert.True(t, kycState.KYCStepPassedCorrectly(users.QuizKYCStep))
 	})
 
 	t.Run("blocked = FacialRecognition, step = quiz(4), quizCompleted = true && !quizDisabled, stepPassed >= kycStep, arg = QuizKYCStep", func(t *testing.T) {
@@ -359,7 +359,7 @@ func TestKYCStepPassedCorrectly(t *testing.T) {
 			KYCStepsCreatedAtField:     KYCStepsCreatedAtField{KYCStepsCreatedAt: &TimeSlice{time.Now(), time.Now(), time.Now(), time.Now()}},
 			KYCStepsLastUpdatedAtField: KYCStepsLastUpdatedAtField{KYCStepsLastUpdatedAt: &TimeSlice{time.Now(), time.Now(), time.Now(), time.Now()}},
 		}
-		assert.Equal(t, false, kycState.KYCStepPassedCorrectly(users.QuizKYCStep))
+		assert.False(t, kycState.KYCStepPassedCorrectly(users.QuizKYCStep))
 	})
 
 	t.Run("blocked = None, step = quiz(4), quizCompleted = false && !quizDisabled, stepPassed >= kycStep, arg = QuizKYCStep", func(t *testing.T) {
@@ -372,7 +372,7 @@ func TestKYCStepPassedCorrectly(t *testing.T) {
 			KYCStepsCreatedAtField:     KYCStepsCreatedAtField{KYCStepsCreatedAt: &TimeSlice{time.Now(), time.Now(), time.Now(), time.Now()}},
 			KYCStepsLastUpdatedAtField: KYCStepsLastUpdatedAtField{KYCStepsLastUpdatedAt: &TimeSlice{time.Now(), time.Now(), time.Now(), time.Now()}},
 		}
-		assert.Equal(t, false, kycState.KYCStepPassedCorrectly(users.QuizKYCStep))
+		assert.True(t, kycState.KYCStepPassedCorrectly(users.QuizKYCStep))
 	})
 
 	t.Run("blocked = None, step = quiz(4), quizCompleted = true && quizDisabled, stepPassed >= kycStep, arg = QuizKYCStep", func(t *testing.T) {
@@ -385,7 +385,7 @@ func TestKYCStepPassedCorrectly(t *testing.T) {
 			KYCStepsCreatedAtField:     KYCStepsCreatedAtField{KYCStepsCreatedAt: &TimeSlice{time.Now(), time.Now(), time.Now(), time.Now()}},
 			KYCStepsLastUpdatedAtField: KYCStepsLastUpdatedAtField{KYCStepsLastUpdatedAt: &TimeSlice{time.Now(), time.Now(), time.Now(), time.Now()}},
 		}
-		assert.Equal(t, false, kycState.KYCStepPassedCorrectly(users.QuizKYCStep))
+		assert.True(t, kycState.KYCStepPassedCorrectly(users.QuizKYCStep))
 	})
 
 	t.Run("blocked = None, step = Social1KYCStep(3), quizCompleted = true && !quizDisabled, stepPassed >= kycStep, arg = Social1KYCStep", func(t *testing.T) {
@@ -398,7 +398,7 @@ func TestKYCStepPassedCorrectly(t *testing.T) {
 			KYCStepsCreatedAtField:     KYCStepsCreatedAtField{KYCStepsCreatedAt: &TimeSlice{time.Now(), time.Now(), time.Now(), time.Now()}},
 			KYCStepsLastUpdatedAtField: KYCStepsLastUpdatedAtField{KYCStepsLastUpdatedAt: &TimeSlice{time.Now(), time.Now(), time.Now(), time.Now()}},
 		}
-		assert.Equal(t, true, kycState.KYCStepPassedCorrectly(users.Social1KYCStep))
+		assert.True(t, kycState.KYCStepPassedCorrectly(users.Social1KYCStep))
 	})
 
 	t.Run("blocked = None, step = Social1KYCStep(3), quizCompleted = false && quizDisabled, stepPassed >= kycStep, arg = Social1KYCStep", func(t *testing.T) {
@@ -411,7 +411,7 @@ func TestKYCStepPassedCorrectly(t *testing.T) {
 			KYCStepsCreatedAtField:     KYCStepsCreatedAtField{KYCStepsCreatedAt: &TimeSlice{time.Now(), time.Now(), time.Now(), time.Now()}},
 			KYCStepsLastUpdatedAtField: KYCStepsLastUpdatedAtField{KYCStepsLastUpdatedAt: &TimeSlice{time.Now(), time.Now(), time.Now(), time.Now()}},
 		}
-		assert.Equal(t, true, kycState.KYCStepPassedCorrectly(users.Social1KYCStep))
+		assert.True(t, kycState.KYCStepPassedCorrectly(users.Social1KYCStep))
 	})
 
 	t.Run("blocked = None, step = Social2KYCStep(5), quizCompleted = true && !quizDisabled, stepPassed >= kycStep, arg = QuizKYCStep", func(t *testing.T) {
@@ -424,7 +424,7 @@ func TestKYCStepPassedCorrectly(t *testing.T) {
 			KYCStepsCreatedAtField:     KYCStepsCreatedAtField{KYCStepsCreatedAt: &TimeSlice{time.Now(), time.Now(), time.Now(), time.Now()}},
 			KYCStepsLastUpdatedAtField: KYCStepsLastUpdatedAtField{KYCStepsLastUpdatedAt: &TimeSlice{time.Now(), time.Now(), time.Now(), time.Now()}},
 		}
-		assert.Equal(t, true, kycState.KYCStepPassedCorrectly(users.QuizKYCStep))
+		assert.True(t, kycState.KYCStepPassedCorrectly(users.QuizKYCStep))
 	})
 
 	t.Run("blocked = None, step = Social2KYCStep(5), quizCompleted = false && !quizDisabled, stepPassed >= kycStep, arg = Social2KYCStep", func(t *testing.T) {
@@ -437,6 +437,6 @@ func TestKYCStepPassedCorrectly(t *testing.T) {
 			KYCStepsCreatedAtField:     KYCStepsCreatedAtField{KYCStepsCreatedAt: &TimeSlice{time.Now(), time.Now(), time.Now(), nil, time.Now()}},
 			KYCStepsLastUpdatedAtField: KYCStepsLastUpdatedAtField{KYCStepsLastUpdatedAt: &TimeSlice{time.Now(), time.Now(), time.Now(), nil, time.Now()}},
 		}
-		assert.Equal(t, true, kycState.KYCStepPassedCorrectly(users.Social2KYCStep))
+		assert.True(t, kycState.KYCStepPassedCorrectly(users.Social2KYCStep))
 	})
 }
