@@ -52,9 +52,6 @@ func MustStartMining(ctx context.Context, cancel context.CancelFunc) Client {
 	mi.wg.Add(int(cfg.Workers))
 	mi.cancel = cancel
 	mi.extraBonusStartDate = extrabonusnotifier.MustGetExtraBonusStartDate(ctx, mi.db)
-	if false {
-		mi.extraBonusIndicesDistribution = extrabonusnotifier.MustGetExtraBonusIndicesDistribution(ctx, mi.db)
-	}
 	mi.mustInitCoinDistributionCollector(ctx)
 
 	for workerNumber := int64(0); workerNumber < cfg.Workers; workerNumber++ {
@@ -364,16 +361,6 @@ func (m *miner) mine(ctx context.Context, workerNumber int64) {
 				DeserializedUsersKey:                usr.DeserializedUsersKey,
 			})
 			if updatedUser != nil {
-				var extraBonusIndex uint16
-				if isAvailable, _ := extrabonusnotifier.IsExtraBonusAvailable(now, m.extraBonusStartDate, updatedUser.ExtraBonusStartedAt, m.extraBonusIndicesDistribution, updatedUser.ID, int16(updatedUser.UTCOffset), &extraBonusIndex, &updatedUser.ExtraBonusDaysClaimNotAvailable, &updatedUser.ExtraBonusLastClaimAvailableAt); isAvailable {
-					if false {
-						eba := &extrabonusnotifier.ExtraBonusAvailable{UserID: updatedUser.UserID, ExtraBonusIndex: extraBonusIndex}
-						msgs = append(msgs, extrabonusnotifier.ExtraBonusAvailableMessage(reqCtx, eba))
-					}
-				} else {
-					updatedUser.ExtraBonusDaysClaimNotAvailable = 0
-					updatedUser.ExtraBonusLastClaimAvailableAt = nil
-				}
 				if userStoppedMining := didUserStoppedMining(now, usr); userStoppedMining != nil {
 					referralsCountGuardOnlyUpdatedUsers = append(referralsCountGuardOnlyUpdatedUsers, userStoppedMining)
 				}
@@ -416,18 +403,6 @@ func (m *miner) mine(ctx context.Context, workerNumber int64) {
 				}
 				updatedUsers = append(updatedUsers, &updatedUser.UpdatedUser)
 			} else {
-				extraBonusOnlyUpdatedUsr := extrabonusnotifier.UpdatedUser{
-					ExtraBonusLastClaimAvailableAtField:            usr.ExtraBonusLastClaimAvailableAtField,
-					DeserializedUsersKey:                           usr.DeserializedUsersKey,
-					ExtraBonusDaysClaimNotAvailableResettableField: model.ExtraBonusDaysClaimNotAvailableResettableField{ExtraBonusDaysClaimNotAvailable: usr.ExtraBonusDaysClaimNotAvailable},
-				}
-				if isAvailable, _ := extrabonusnotifier.IsExtraBonusAvailable(now, m.extraBonusStartDate, usr.ExtraBonusStartedAt, m.extraBonusIndicesDistribution, usr.ID, int16(usr.UTCOffset), &extraBonusOnlyUpdatedUsr.ExtraBonusIndex, &extraBonusOnlyUpdatedUsr.ExtraBonusDaysClaimNotAvailable, &extraBonusOnlyUpdatedUsr.ExtraBonusLastClaimAvailableAt); isAvailable {
-					if false {
-						eba := &extrabonusnotifier.ExtraBonusAvailable{UserID: usr.UserID, ExtraBonusIndex: extraBonusOnlyUpdatedUsr.ExtraBonusIndex}
-						msgs = append(msgs, extrabonusnotifier.ExtraBonusAvailableMessage(reqCtx, eba))
-					}
-					extraBonusOnlyUpdatedUsers = append(extraBonusOnlyUpdatedUsers, &extraBonusOnlyUpdatedUsr)
-				}
 				if updUsr := updateT0AndTMinus1ReferralsForUserHasNeverMined(usr); updUsr != nil {
 					referralsUpdated = append(referralsUpdated, updUsr)
 					if t0Ref != nil && t0Ref.ID != 0 && usr.ActiveT1Referrals > 0 {

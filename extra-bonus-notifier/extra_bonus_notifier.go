@@ -197,9 +197,8 @@ func (ebn *extraBonusNotifier) notifyingExtraBonusAvailability(ctx context.Conte
 		******************************************************************************************************************************************************/
 
 		for _, usr := range userResults {
-			var extraBonusIndex uint16
-			if isAvailable, _ := IsExtraBonusAvailable(now, ebn.extraBonusStartDate, usr.ExtraBonusStartedAt, ebn.extraBonusIndicesDistribution, usr.ID, int16(usr.UTCOffset), &extraBonusIndex, &usr.ExtraBonusDaysClaimNotAvailable, &usr.ExtraBonusLastClaimAvailableAt); isAvailable {
-				eba := &ExtraBonusAvailable{UserID: usr.UserID, ExtraBonusIndex: extraBonusIndex}
+			if isAvailable := IsExtraBonusAvailable(now, usr.ExtraBonusStartedAt, usr.ID); isAvailable {
+				eba := &ExtraBonusAvailable{UserID: usr.UserID}
 				updatedUsers = append(updatedUsers, &usr.UpdatedUser)
 				msgs = append(msgs, ExtraBonusAvailableMessage(ctx, eba))
 			}

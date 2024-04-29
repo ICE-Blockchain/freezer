@@ -211,10 +211,6 @@ func (r *repository) GetMiningSummary(ctx context.Context, userID string) (*Mini
 		extraBonus = ms[0].ExtraBonus
 	}
 	negativeMiningRate := ms[0].SlashingRateSolo + ms[0].SlashingRateT0 + ms[0].SlashingRateT1 + ms[0].SlashingRateT2
-	var availableExtraBonusVal float64
-	if avb, gErr := r.getAvailableExtraBonus(now, id, ms[0].ExtraBonusStartedAtField, ms[0].ExtraBonusLastClaimAvailableAtField, ms[0].MiningSessionSoloStartedAtField, ms[0].MiningSessionSoloEndedAtField, ms[0].ExtraBonusDaysClaimNotAvailableResettableField, ms[0].UTCOffsetField, ms[0].NewsSeenField); false && gErr == nil { //nolint:lll // .
-		availableExtraBonusVal = avb.ExtraBonus
-	}
 	var t2 int32
 	if r.isAdvancedTeamEnabled(ms[0].LatestDevice) {
 		t2 = ms[0].ActiveT2Referrals
@@ -225,7 +221,6 @@ func (r *repository) GetMiningSummary(ctx context.Context, userID string) (*Mini
 		MiningSession:               r.calculateMiningSession(now, ms[0].MiningSessionSoloLastStartedAt, ms[0].MiningSessionSoloEndedAt),
 		RemainingFreeMiningSessions: r.calculateRemainingFreeMiningSessions(now, ms[0].MiningSessionSoloEndedAt),
 		MiningRates:                 r.calculateMiningRateSummaries(t0, extraBonus, ms[0].PreStakingAllocation, ms[0].PreStakingBonus, ms[0].ActiveT1Referrals, t2, currentAdoption.BaseMiningRate, negativeMiningRate, ms[0].BalanceTotalStandard+ms[0].BalanceTotalPreStaking, now, ms[0].MiningSessionSoloEndedAt), //nolint:lll // .
-		ExtraBonusSummary:           ExtraBonusSummary{AvailableExtraBonus: availableExtraBonusVal},
 		MiningStarted:               !ms[0].MiningSessionSoloStartedAt.IsNil(),
 		KYCStepBlocked:              ms[0].KYCStepBlocked,
 	}, nil

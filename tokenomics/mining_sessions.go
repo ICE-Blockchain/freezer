@@ -48,8 +48,6 @@ type (
 		model.IDTMinus1Field
 		model.PreStakingAllocationField
 		model.PreStakingBonusField
-		model.ExtraBonusDaysClaimNotAvailableField
-		model.ExtraBonusLastClaimAvailableAtField
 		model.ExtraBonusStartedAtField
 	}
 )
@@ -87,16 +85,16 @@ func (r *repository) StartNewMiningSession( //nolint:funlen,gocognit // A lot of
 	if err != nil {
 		return err
 	}
+	prevKYCStepPassed := old[0].KYCStepPassed
 	if err = r.validateKYC(ctx, userID, old[0], skipKYCSteps); shouldRollback == nil && err != nil {
 		return err
 	}
 	if err = r.updateTMinus1(ctx, id, old[0].IDT0, old[0].IDTMinus1); err != nil {
 		return errors.Wrapf(err, "failed to updateTMinus1 for id:%v", id)
 	}
-	if old[0].KYCStepPassed >= users.QuizKYCStep {
-		var extraBonusIndex uint16
-		if _, isClaimable := extrabonusnotifier.IsExtraBonusAvailable(now, r.extraBonusStartDate, old[0].ExtraBonusStartedAt, r.extraBonusIndicesDistribution, id, int16(old[0].UTCOffset), &extraBonusIndex, &old[0].ExtraBonusDaysClaimNotAvailable, &old[0].ExtraBonusLastClaimAvailableAt); isClaimable {
-			if err := r.ClaimExtraBonus(ctx, &ExtraBonusSummary{UserID: userID}); err != nil {
+	if old[0].KYCStepPassed >= users.QuizKYCStep && prevKYCStepPassed < users.QuizKYCStep {
+		if isAvailable := extrabonusnotifier.IsExtraBonusAvailable(now, old[0].ExtraBonusStartedAt, old[0].ID); isAvailable {
+			if err := r.ClaimExtraBonus(ctx, &ExtraBonusSummary{UserID: userID}); err != nil && !errors.Is(err, ErrNotFound) && !errors.Is(err, ErrDuplicate) {
 				return errors.Wrapf(err, "failed to ClaimExtraBonus for:%v", userID)
 			}
 		}

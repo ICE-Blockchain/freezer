@@ -31,16 +31,11 @@ type (
 	}
 	ExtraBonusConfig struct {
 		ExtraBonuses struct {
-			FlatValues                []uint16            `yaml:"flatValues"`
-			NewsSeenValues            []uint16            `yaml:"newsSeenValues"`
-			MiningStreakValues        []uint16            `yaml:"miningStreakValues"`
-			Duration                  stdlibtime.Duration `yaml:"duration"`
-			UTCOffsetDuration         stdlibtime.Duration `yaml:"utcOffsetDuration" mapstructure:"utcOffsetDuration"`
-			ClaimWindow               stdlibtime.Duration `yaml:"claimWindow"`
-			DelayedClaimPenaltyWindow stdlibtime.Duration `yaml:"delayedClaimPenaltyWindow"`
-			AvailabilityWindow        stdlibtime.Duration `yaml:"availabilityWindow"`
-			TimeToAvailabilityWindow  stdlibtime.Duration `yaml:"timeToAvailabilityWindow"`
-			KycPassedExtraBonus       float64             `yaml:"kycPassedExtraBonus"`
+			FlatValues          []uint16            `yaml:"flatValues"`
+			NewsSeenValues      []uint16            `yaml:"newsSeenValues"`
+			MiningStreakValues  []uint16            `yaml:"miningStreakValues"`
+			Duration            stdlibtime.Duration `yaml:"duration"`
+			KycPassedExtraBonus float64             `yaml:"kycPassedExtraBonus"`
 		} `yaml:"extraBonuses"`
 	}
 )
