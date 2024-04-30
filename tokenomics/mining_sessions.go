@@ -13,7 +13,6 @@ import (
 	"github.com/redis/go-redis/v9"
 
 	"github.com/ice-blockchain/eskimo/users"
-	extrabonusnotifier "github.com/ice-blockchain/freezer/extra-bonus-notifier"
 	"github.com/ice-blockchain/freezer/model"
 	messagebroker "github.com/ice-blockchain/wintr/connectors/message_broker"
 	"github.com/ice-blockchain/wintr/connectors/storage/v3"
@@ -93,10 +92,8 @@ func (r *repository) StartNewMiningSession( //nolint:funlen,gocognit // A lot of
 		return errors.Wrapf(err, "failed to updateTMinus1 for id:%v", id)
 	}
 	if old[0].KYCStepPassed >= users.QuizKYCStep && prevKYCStepPassed < users.QuizKYCStep {
-		if isAvailable := extrabonusnotifier.IsExtraBonusAvailable(now, old[0].ExtraBonusStartedAt, old[0].ID); isAvailable {
-			if err := r.ClaimExtraBonus(ctx, &ExtraBonusSummary{UserID: userID}); err != nil && !errors.Is(err, ErrNotFound) && !errors.Is(err, ErrDuplicate) {
-				return errors.Wrapf(err, "failed to ClaimExtraBonus for:%v", userID)
-			}
+		if err := r.ClaimExtraBonus(ctx, &ExtraBonusSummary{UserID: userID}); err != nil && !errors.Is(err, ErrNotFound) {
+			return errors.Wrapf(err, "failed to ClaimExtraBonus for:%v", userID)
 		}
 	}
 	newMS, extension := r.newStartOrExtendMiningSession(&old[0].StartOrExtendMiningSession, now)

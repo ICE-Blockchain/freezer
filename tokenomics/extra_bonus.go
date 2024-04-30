@@ -12,7 +12,6 @@ import (
 	"github.com/hashicorp/go-multierror"
 	"github.com/pkg/errors"
 
-	extrabonusnotifier "github.com/ice-blockchain/freezer/extra-bonus-notifier"
 	"github.com/ice-blockchain/freezer/model"
 	messagebroker "github.com/ice-blockchain/wintr/connectors/message_broker"
 	"github.com/ice-blockchain/wintr/connectors/storage/v3"
@@ -36,46 +35,17 @@ func (r *repository) ClaimExtraBonus(ctx context.Context, ebs *ExtraBonusSummary
 		return errors.Wrapf(err, "failed to getOrInitInternalID for userID:%v", ebs.UserID)
 	}
 	now := time.Now()
-	stateForUpdate, err := r.detectAvailableExtraBonus(ctx, now, id)
-	if err != nil {
-		return errors.Wrapf(err, "failed to getAvailableExtraBonus for userID:%v", ebs.UserID)
+	if r.cfg.ExtraBonuses.KycPassedExtraBonus == 0 {
+		return ErrNotFound
+	}
+	stateForUpdate := &availableExtraBonus{
+		ExtraBonusStartedAtField: model.ExtraBonusStartedAtField{ExtraBonusStartedAt: now},
+		DeserializedUsersKey:     model.DeserializedUsersKey{ID: id},
+		ExtraBonusField:          model.ExtraBonusField{ExtraBonus: r.cfg.ExtraBonuses.KycPassedExtraBonus},
 	}
 	ebs.AvailableExtraBonus = stateForUpdate.ExtraBonus
 
 	return errors.Wrapf(storage.Set(ctx, r.db, stateForUpdate), "failed to claim extra bonus:%#v", stateForUpdate)
-}
-
-func (r *repository) detectAvailableExtraBonus(ctx context.Context, now *time.Time, id int64) (*availableExtraBonus, error) {
-	if ctx.Err() != nil {
-		return nil, errors.Wrap(ctx.Err(), "unexpected deadline")
-	}
-	usr, err := storage.Get[struct {
-		model.ExtraBonusStartedAtField
-		model.UserIDField
-	}](ctx, r.db, model.SerializedUsersKey(id))
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get extra bonus state before claiming it for id:%v", id)
-	}
-	if len(usr) == 0 {
-		return nil, ErrNotFound
-	}
-
-	return r.getAvailableExtraBonus(now, id, usr[0].ExtraBonusStartedAtField)
-}
-
-func (r *repository) getAvailableExtraBonus(now *time.Time, id int64, extraBonusStartedAtField model.ExtraBonusStartedAtField) (*availableExtraBonus, error) {
-	if r.cfg.ExtraBonuses.KycPassedExtraBonus == 0 {
-		return nil, ErrNotFound
-	}
-	if bonusAvailable := extrabonusnotifier.IsExtraBonusAvailable(now, extraBonusStartedAtField.ExtraBonusStartedAt, id); !bonusAvailable {
-		return nil, ErrDuplicate
-	}
-
-	return &availableExtraBonus{
-		ExtraBonusStartedAtField: model.ExtraBonusStartedAtField{ExtraBonusStartedAt: now},
-		DeserializedUsersKey:     model.DeserializedUsersKey{ID: id},
-		ExtraBonusField:          model.ExtraBonusField{ExtraBonus: r.cfg.ExtraBonuses.KycPassedExtraBonus},
-	}, nil
 }
 
 func (s *deviceMetadataTableSource) Process(ctx context.Context, msg *messagebroker.Message) error { //nolint:funlen // .

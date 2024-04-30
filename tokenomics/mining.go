@@ -221,6 +221,7 @@ func (r *repository) GetMiningSummary(ctx context.Context, userID string) (*Mini
 		MiningSession:               r.calculateMiningSession(now, ms[0].MiningSessionSoloLastStartedAt, ms[0].MiningSessionSoloEndedAt),
 		RemainingFreeMiningSessions: r.calculateRemainingFreeMiningSessions(now, ms[0].MiningSessionSoloEndedAt),
 		MiningRates:                 r.calculateMiningRateSummaries(t0, extraBonus, ms[0].PreStakingAllocation, ms[0].PreStakingBonus, ms[0].ActiveT1Referrals, t2, currentAdoption.BaseMiningRate, negativeMiningRate, ms[0].BalanceTotalStandard+ms[0].BalanceTotalPreStaking, now, ms[0].MiningSessionSoloEndedAt), //nolint:lll // .
+		ExtraBonusSummary:           ExtraBonusSummary{AvailableExtraBonus: extraBonus},
 		MiningStarted:               !ms[0].MiningSessionSoloStartedAt.IsNil(),
 		KYCStepBlocked:              ms[0].KYCStepBlocked,
 	}, nil
