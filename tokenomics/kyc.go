@@ -229,6 +229,11 @@ func (r *repository) isKYCEnabled(ctx context.Context, latestDevice string, kycS
 		if !isWeb && kycConfig.FaceAuth.Enabled && !r.isKycStepEnabledForDevice(users.FacialRecognitionKYCStep, latestDevice) {
 			return false
 		}
+		aErr := r.isFaceKYCAvailable(ctx)
+		if aErr != nil {
+			log.Error(errors.Wrapf(aErr, "face kyc is unavailable"))
+		}
+		return aErr == nil
 	case users.Social1KYCStep:
 		if isWeb && !kycConfig.WebSocial1KYC.Enabled {
 			return false
@@ -279,6 +284,43 @@ func (r *repository) isKYCEnabled(ctx context.Context, latestDevice string, kycS
 	}
 
 	return true
+}
+
+func (r *repository) isFaceKYCAvailable(ctx context.Context) error {
+	request := req.
+		SetContext(ctx).
+		SetRetryCount(5).
+		SetRetryBackoffInterval(10*stdlibtime.Millisecond, 1*stdlibtime.Second).
+		SetRetryHook(func(resp *req.Response, err error) {
+			if err != nil {
+				log.Error(errors.Wrap(err, "failed to fetch face auth availability, retrying..."))
+			} else {
+				body, _ := resp.ToString()
+				log.Error(errors.Errorf("failed to fetch face auth availability status code:%v, body:%v, retrying...", resp.GetStatusCode(), body))
+			}
+		}).
+		SetRetryCondition(func(resp *req.Response, err error) bool {
+			return err != nil || (resp.GetStatusCode() != http.StatusOK) //nolint:lll // .
+		})
+	if resp, err := request.Get(r.cfg.KYC.FaceAuthAvailabilityURL); err != nil {
+		return errors.Wrap(err, "failed to fetch face auth availability")
+	} else if statusCode := resp.GetStatusCode(); statusCode != http.StatusOK {
+		return errors.Errorf("[%v]failed to fetch face auth availability", statusCode)
+	} else if data, err2 := resp.ToBytes(); err2 != nil {
+		return errors.Wrap(err2, "failed to read body of face auth availability check")
+	} else {
+		var availability struct {
+			Available bool `json:"available"`
+		}
+		if jErr := json.Unmarshal(data, &availability); jErr != nil {
+			return errors.Wrapf(jErr, "failed to decode %v into face auth avaliability check", string(data))
+		}
+		if !availability.Available {
+			return errors.Errorf("not available")
+		}
+		return nil
+	}
+
 }
 
 func (r *repository) isKycStepEnabledForDevice(kycStep users.KYCStep, device string) bool {

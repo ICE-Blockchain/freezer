@@ -337,6 +337,7 @@ type (
 		KYC                        struct {
 			RequireQuizOnlyOnSpecificDayOfWeek *int                `yaml:"require-quiz-only-on-specific-day-of-week" mapstructure:"require-quiz-only-on-specific-day-of-week"` //nolint:lll // .
 			TryResetKYCStepsURL                string              `yaml:"try-reset-kyc-steps-url" mapstructure:"try-reset-kyc-steps-url"`
+			FaceAuthAvailabilityURL            string              `yaml:"face-auth-availability-url" mapstructure:"face-auth-availability-url"`
 			ConfigJSONURL                      string              `yaml:"config-json-url" mapstructure:"config-json-url"`
 			FaceRecognitionDelay               stdlibtime.Duration `yaml:"face-recognition-delay" mapstructure:"face-recognition-delay"`
 			LivenessDelay                      stdlibtime.Duration `yaml:"liveness-delay" mapstructure:"liveness-delay"`

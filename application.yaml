@@ -35,6 +35,7 @@ tokenomics: &tokenomics
   kyc:
     try-reset-kyc-steps-url: https://something.example.com
     config-json-url: https://ice-staging.b-cdn.net/something/somebogus.json
+    face-auth-availability-url: https://localhost:443/v1w/face-auth/availability
     liveness-delay: 5m
     face-recognition-delay: 5m
     social1-delay: 3m
