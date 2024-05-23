@@ -94,7 +94,19 @@ func (r *repository) validateKYC(ctx context.Context, userID string, state *getC
 			return errors.Errorf("you can't skip kycStep:%v", skipKYCStep)
 		}
 	}
-	if err := r.overrideKYCStateWithEskimoKYCState(ctx, userID, state, skipKYCSteps); err != nil {
+	nextKYCStep := users.NoneKYCStep
+	if userForwardedToKYC := r.checkNextKYCStep(ctx, state, true); userForwardedToKYC != nil {
+		if tErr := terror.As(userForwardedToKYC); tErr != nil && len(tErr.Data) > 0 {
+			if stepsSlice, hasSteps := tErr.Data["kycSteps"]; hasSteps {
+				steps := stepsSlice.([]users.KYCStep)
+				if len(steps) > 0 {
+					nextKYCStep = steps[0]
+				}
+			}
+		}
+	}
+	faceKycAvailable, err := r.overrideKYCStateWithEskimoKYCState(ctx, userID, state, skipKYCSteps, nextKYCStep)
+	if err != nil {
 		return errors.Wrapf(err, "failed to overrideKYCStateWithEskimoKYCState for %#v", state)
 	}
 	if (state.KYCStepBlocked == users.FacialRecognitionKYCStep && r.isKYCEnabled(ctx, state.LatestDevice, users.FacialRecognitionKYCStep)) ||
@@ -104,6 +116,11 @@ func (r *repository) validateKYC(ctx context.Context, userID string, state *getC
 			"kycStepBlocked": disabledStep,
 		})
 	}
+
+	return r.checkNextKYCStep(ctx, state, faceKycAvailable)
+}
+
+func (r *repository) checkNextKYCStep(ctx context.Context, state *getCurrentMiningSession, faceKycAvailable bool) error {
 	switch state.KYCStepPassed {
 	case users.NoneKYCStep:
 		var (
@@ -111,19 +128,19 @@ func (r *repository) validateKYC(ctx context.Context, userID string, state *getC
 			isAfterFirstWindow      = time.Now().Sub(*r.livenessLoadDistributionStartDate.Time) > r.cfg.KYC.FaceRecognitionDelay
 			isReservedForToday      = r.cfg.KYC.FaceRecognitionDelay <= r.cfg.MiningSessionDuration.Max || isAfterFirstWindow || int64((time.Now().Sub(*r.livenessLoadDistributionStartDate.Time)%r.cfg.KYC.FaceRecognitionDelay)/r.cfg.MiningSessionDuration.Max) >= state.ID%int64(r.cfg.KYC.FaceRecognitionDelay/r.cfg.MiningSessionDuration.Max) //nolint:lll // .
 		)
-		if r.isKYCStepForced(users.FacialRecognitionKYCStep, state.UserID) || (atLeastOneMiningStarted && isReservedForToday && r.isKYCEnabled(ctx, state.LatestDevice, users.FacialRecognitionKYCStep)) { //nolint:lll // .
+		if r.isKYCStepForced(users.FacialRecognitionKYCStep, state.UserID) || (atLeastOneMiningStarted && isReservedForToday && r.isKYCEnabled(ctx, state.LatestDevice, users.FacialRecognitionKYCStep) && faceKycAvailable) { //nolint:lll // .
 			return terror.New(ErrKYCRequired, map[string]any{
 				"kycSteps": []users.KYCStep{users.FacialRecognitionKYCStep, users.LivenessDetectionKYCStep},
 			})
 		}
 	case users.FacialRecognitionKYCStep:
-		if r.isKYCStepForced(users.LivenessDetectionKYCStep, state.UserID) || (r.isKYCEnabled(ctx, state.LatestDevice, users.LivenessDetectionKYCStep) && state.KYCStepBlocked != users.LivenessDetectionKYCStep) { //nolint:lll // .
+		if r.isKYCStepForced(users.LivenessDetectionKYCStep, state.UserID) || (r.isKYCEnabled(ctx, state.LatestDevice, users.LivenessDetectionKYCStep) && faceKycAvailable && state.KYCStepBlocked != users.LivenessDetectionKYCStep) { //nolint:lll // .
 			return terror.New(ErrKYCRequired, map[string]any{
 				"kycSteps": []users.KYCStep{users.LivenessDetectionKYCStep},
 			})
 		}
 	case users.LivenessDetectionKYCStep:
-		if err := r.verifyLivenessKYC(ctx, state); err != nil {
+		if err := r.verifyLivenessKYC(ctx, state, faceKycAvailable); err != nil {
 			return err
 		}
 		social1Required := (state.KYCStepAttempted(users.Social1KYCStep-1) && state.KYCStepNotAttempted(users.Social1KYCStep) && int64((time.Now().Sub(*r.livenessLoadDistributionStartDate.Time)%(2*r.cfg.KYC.Social1Delay))/r.cfg.MiningSessionDuration.Max) >= state.ID%int64((2*r.cfg.KYC.Social1Delay)/r.cfg.MiningSessionDuration.Max)) || //nolint:lll // .
@@ -136,11 +153,11 @@ func (r *repository) validateKYC(ctx context.Context, userID string, state *getC
 			})
 		}
 	case users.Social1KYCStep:
-		if err := r.verifyLivenessKYC(ctx, state); err != nil {
+		if err := r.verifyLivenessKYC(ctx, state, faceKycAvailable); err != nil {
 			return err
 		}
 	case users.QuizKYCStep:
-		if err := r.verifyLivenessKYC(ctx, state); err != nil {
+		if err := r.verifyLivenessKYC(ctx, state, faceKycAvailable); err != nil {
 			return err
 		}
 		social2Required := (state.KYCStepAttempted(users.Social2KYCStep-1) && state.KYCStepNotAttempted(users.Social2KYCStep)) ||
@@ -153,7 +170,7 @@ func (r *repository) validateKYC(ctx context.Context, userID string, state *getC
 			})
 		}
 	default:
-		if err := r.verifyLivenessKYC(ctx, state); err != nil || r.isLastKYCStep(state.KYCStepPassed) {
+		if err := r.verifyLivenessKYC(ctx, state, faceKycAvailable); err != nil || r.isLastKYCStep(state.KYCStepPassed) {
 			return err
 		}
 		nextKYCStep := state.KYCStepPassed + 1
@@ -184,13 +201,13 @@ func (r *repository) isLastKYCStep(kycStep users.KYCStep) bool {
 	return kycStep == lastKYCStep
 }
 
-func (r *repository) verifyLivenessKYC(ctx context.Context, state *getCurrentMiningSession) error {
+func (r *repository) verifyLivenessKYC(ctx context.Context, state *getCurrentMiningSession, faceKycAvailable bool) error {
 	var (
 		isAfterDelay           = state.DelayPassedSinceLastKYCStepAttempt(users.LivenessDetectionKYCStep, r.cfg.KYC.LivenessDelay)
 		isNetworkDelayAdjusted = state.DelayPassedSinceLastKYCStepAttempt(users.LivenessDetectionKYCStep, r.cfg.MiningSessionDuration.Max)
 		isReservedForToday     = r.cfg.KYC.LivenessDelay > r.cfg.MiningSessionDuration.Max && int64((time.Now().Sub(*r.livenessLoadDistributionStartDate.Time)%r.cfg.KYC.LivenessDelay)/r.cfg.MiningSessionDuration.Max) == state.ID%int64(r.cfg.KYC.LivenessDelay/r.cfg.MiningSessionDuration.Max) //nolint:lll // .
 	)
-	if isNetworkDelayAdjusted && (isAfterDelay || isReservedForToday) && r.isKYCEnabled(ctx, state.LatestDevice, users.LivenessDetectionKYCStep) {
+	if isNetworkDelayAdjusted && (isAfterDelay || isReservedForToday) && r.isKYCEnabled(ctx, state.LatestDevice, users.LivenessDetectionKYCStep) && faceKycAvailable {
 		return terror.New(ErrKYCRequired, map[string]any{
 			"kycSteps": []users.KYCStep{users.LivenessDetectionKYCStep},
 		})
@@ -229,11 +246,7 @@ func (r *repository) isKYCEnabled(ctx context.Context, latestDevice string, kycS
 		if !isWeb && kycConfig.FaceAuth.Enabled && !r.isKycStepEnabledForDevice(users.FacialRecognitionKYCStep, latestDevice) {
 			return false
 		}
-		aErr := r.isFaceKYCAvailable(ctx)
-		if aErr != nil {
-			log.Error(errors.Wrapf(aErr, "face kyc is unavailable"))
-		}
-		return aErr == nil
+		return true
 	case users.Social1KYCStep:
 		if isWeb && !kycConfig.WebSocial1KYC.Enabled {
 			return false
@@ -284,43 +297,6 @@ func (r *repository) isKYCEnabled(ctx context.Context, latestDevice string, kycS
 	}
 
 	return true
-}
-
-func (r *repository) isFaceKYCAvailable(ctx context.Context) error {
-	request := req.
-		SetContext(ctx).
-		SetRetryCount(5).
-		SetRetryBackoffInterval(10*stdlibtime.Millisecond, 1*stdlibtime.Second).
-		SetRetryHook(func(resp *req.Response, err error) {
-			if err != nil {
-				log.Error(errors.Wrap(err, "failed to fetch face auth availability, retrying..."))
-			} else {
-				body, _ := resp.ToString()
-				log.Error(errors.Errorf("failed to fetch face auth availability status code:%v, body:%v, retrying...", resp.GetStatusCode(), body))
-			}
-		}).
-		SetRetryCondition(func(resp *req.Response, err error) bool {
-			return err != nil || (resp.GetStatusCode() != http.StatusOK) //nolint:lll // .
-		})
-	if resp, err := request.Get(r.cfg.KYC.FaceAuthAvailabilityURL); err != nil {
-		return errors.Wrap(err, "failed to fetch face auth availability")
-	} else if statusCode := resp.GetStatusCode(); statusCode != http.StatusOK {
-		return errors.Errorf("[%v]failed to fetch face auth availability", statusCode)
-	} else if data, err2 := resp.ToBytes(); err2 != nil {
-		return errors.Wrap(err2, "failed to read body of face auth availability check")
-	} else {
-		var availability struct {
-			Available bool `json:"available"`
-		}
-		if jErr := json.Unmarshal(data, &availability); jErr != nil {
-			return errors.Wrapf(jErr, "failed to decode %v into face auth avaliability check", string(data))
-		}
-		if !availability.Available {
-			return errors.Errorf("not available")
-		}
-		return nil
-	}
-
 }
 
 func (r *repository) isKycStepEnabledForDevice(kycStep users.KYCStep, device string) bool {
@@ -488,7 +464,7 @@ Because existing users have empty KYCState in dragonfly cuz usersTableSource mig
 And because we might need to reset any kyc steps for the user prior to starting to mine.
 So we need to call Eskimo for that, to be sure we have the valid kyc state for the user before starting to mine.
 */
-func (r *repository) overrideKYCStateWithEskimoKYCState(ctx context.Context, userID string, state *getCurrentMiningSession, skipKYCSteps []users.KYCStep) error {
+func (r *repository) overrideKYCStateWithEskimoKYCState(ctx context.Context, userID string, state *getCurrentMiningSession, skipKYCSteps []users.KYCStep, nextKYCStep users.KYCStep) (faceKycAvailable bool, err error) {
 	request := req.
 		SetContext(ctx).
 		SetRetryCount(25).
@@ -519,12 +495,15 @@ func (r *repository) overrideKYCStateWithEskimoKYCState(ctx context.Context, use
 		}
 		request = request.AddQueryParams("skipKYCSteps", skipKYCStepsQParamValues...)
 	}
+	if nextKYCStep != users.NoneKYCStep {
+		request = request.AddQueryParams("nextKYCStep", strconv.Itoa(int(nextKYCStep)))
+	}
 	if resp, err := request.Post(fmt.Sprintf("%v/users/%v", r.cfg.KYC.TryResetKYCStepsURL, userID)); err != nil {
-		return errors.Wrapf(err, "failed to fetch eskimo user state for userID:%v, skipKYCSteps:%#v", userID, skipKYCSteps)
+		return false, errors.Wrapf(err, "failed to fetch eskimo user state for userID:%v, skipKYCSteps:%#v", userID, skipKYCSteps)
 	} else if statusCode := resp.GetStatusCode(); statusCode != http.StatusOK {
-		return errors.Errorf("[%v]failed to fetch eskimo user state for userID:%v, skipKYCSteps:%#v", statusCode, userID, skipKYCSteps)
+		return false, errors.Errorf("[%v]failed to fetch eskimo user state for userID:%v, skipKYCSteps:%#v", statusCode, userID, skipKYCSteps)
 	} else if data, err2 := resp.ToBytes(); err2 != nil {
-		return errors.Wrapf(err2, "failed to read body of eskimo user state request for userID:%v, skipKYCSteps:%#v", userID, skipKYCSteps)
+		return false, errors.Wrapf(err2, "failed to read body of eskimo user state request for userID:%v, skipKYCSteps:%#v", userID, skipKYCSteps)
 	} else {
 		var usr struct {
 			model.UserIDField
@@ -532,14 +511,15 @@ func (r *repository) overrideKYCStateWithEskimoKYCState(ctx context.Context, use
 			model.MiningBlockchainAccountAddressField
 			model.KYCState
 			model.DeserializedUsersKey
+			KycFaceAvailable bool `json:"kycFaceAvailable"`
 		}
 		if err3 := json.Unmarshal(data, &usr); err3 != nil {
-			return errors.Wrapf(err3, "failed to unmarshal into %#v, data: `%v`, skipKYCSteps:%#v", &usr, string(data), skipKYCSteps)
+			return false, errors.Wrapf(err3, "failed to unmarshal into %#v, data: `%v`, skipKYCSteps:%#v", &usr, string(data), skipKYCSteps)
 		} else {
 			usr.DeserializedUsersKey = state.DeserializedUsersKey
 			state.KYCState = usr.KYCState
 
-			return errors.Wrapf(storage.Set(ctx, r.db, &usr), "failed to db set partial state:%#v, userID:%v, skipKYCSteps:%#v", &usr, userID, skipKYCSteps) //nolint:lll // .
+			return usr.KycFaceAvailable, errors.Wrapf(storage.Set(ctx, r.db, &usr), "failed to db set partial state:%#v, userID:%v, skipKYCSteps:%#v", &usr, userID, skipKYCSteps) //nolint:lll // .
 		}
 	}
 }
