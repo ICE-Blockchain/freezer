@@ -35,6 +35,9 @@ import (
 func init() {
 	appCfg.MustLoadFromKey(parentApplicationYamlKey, &cfg.Config)
 	appCfg.MustLoadFromKey(applicationYamlKey, &cfg)
+	if cfg.SlashingDaysCount == 0 {
+		log.Panic(errors.Errorf("slashingDaysCount is zero"))
+	}
 	cfg.disableAdvancedTeam = new(atomic.Pointer[[]string])
 	cfg.coinDistributionCollectorSettings = new(atomic.Pointer[coindistribution.CollectorSettings])
 	cfg.coinDistributionCollectorStartedAt = new(atomic.Pointer[time.Time])
