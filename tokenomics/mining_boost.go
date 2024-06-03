@@ -80,9 +80,11 @@ func (r *repository) InitializeMiningBoostUpgrade(ctx context.Context, miningBoo
 	}
 
 	var previousLevelPrices float64
-	for ix, level := range *r.cfg.MiningBoost.levels.Load() {
-		if ix < int(miningBoostLevelIndex) {
-			previousLevelPrices += level.icePrice
+	if res[0].MiningBoostLevelIndex != nil {
+		for ix, level := range *r.cfg.MiningBoost.levels.Load() {
+			if ix <= int(*res[0].MiningBoostLevelIndex) {
+				previousLevelPrices += level.icePrice
+			}
 		}
 	}
 	icePrice := strconv.FormatFloat((*r.cfg.MiningBoost.levels.Load())[miningBoostLevelIndex].icePrice-previousLevelPrices, 'f', 15, 64)
@@ -321,7 +323,7 @@ func (r *repository) buildMiningBoostLevels() *[]*MiningBoostLevel {
 	levels := make([]*MiningBoostLevel, 0, len(r.cfg.MiningBoost.Levels))
 	for dollars, level := range r.cfg.MiningBoost.Levels {
 		clone := *level
-		clone.icePrice = dollars * *r.cfg.MiningBoost.icePrice.Load()
+		clone.icePrice = dollars / *r.cfg.MiningBoost.icePrice.Load()
 		clone.ICEPrice = strconv.FormatFloat(clone.icePrice, 'f', 15, 64)
 		levels = append(levels, &clone)
 	}
