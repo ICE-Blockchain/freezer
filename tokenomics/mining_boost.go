@@ -120,10 +120,11 @@ func (r *repository) FinalizeMiningBoostUpgrade(ctx context.Context, network Blo
 	if len(parts) != 2 {
 		return nil, ErrNotFound
 	}
-	expireAt, err := r.db.ExpireTime(ctx, key).Result()
+	ttl, err := r.db.TTL(ctx, key).Result()
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get ExpireTime for mining_boost_upgrades for user_id %v", userID)
+		return nil, errors.Wrapf(err, "failed to get TTL for mining_boost_upgrades for user_id %v", userID)
 	}
+	expireAt := time.Now().Add(ttl.Abs())
 
 	rawMiningBoostLevelIndex, rawICEPrice := parts[0], parts[1]
 	miningBoostLevelIndex, err := strconv.ParseUint(rawMiningBoostLevelIndex, 10, 64)
@@ -222,7 +223,7 @@ func (r *repository) FinalizeMiningBoostUpgrade(ctx context.Context, network Blo
 	}
 
 	return &PendingMiningBoostUpgrade{
-		ExpiresAt:      time.New(stdlibtime.Unix(0, expireAt.Nanoseconds())),
+		ExpiresAt:      time.New(stdlibtime.Unix(0, expireAt.UnixNano())),
 		ICEPrice:       strconv.FormatFloat(icePrice-burntAmount, 'f', 15, 64),
 		PaymentAddress: r.cfg.MiningBoost.PaymentAddress,
 	}, nil
