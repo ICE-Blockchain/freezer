@@ -12,6 +12,7 @@ import (
 	"sync/atomic"
 	stdlibtime "time"
 
+	"github.com/ethereum/go-ethereum"
 	ethabi "github.com/ethereum/go-ethereum/accounts/abi"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -152,10 +153,13 @@ func (r *repository) FinalizeMiningBoostUpgrade(ctx context.Context, network Blo
 	}
 	txHash = strings.ToLower(txHash)
 	burntAmount, err := r.getBurntAmountForMiningBoostUpgrade(ctx, network, txHash)
-	if err != nil {
+	if err != nil && !errors.Is(err, ErrNotFound) {
 		return nil, errors.Wrap(err, "failed to getBurntAmountForMiningBoostUpgrade")
 	}
 	if burntAmount <= 0 {
+		if err != nil {
+			log.Error(errors.Wrapf(err, "tx for upgrading mining boost tier is invalid: failed to getBurntAmountForMiningBoostUpgrade for tx %v userID %v", txHash, userID))
+		}
 		return nil, ErrInvalidMiningBoostUpgradeTX
 	}
 
@@ -240,6 +244,9 @@ func (r *repository) getBurntAmountForMiningBoostUpgrade(ctx context.Context, ne
 
 	receipt, err := networkClient.TransactionReceipt(ctx, ethcommon.HexToHash(txHash))
 	if err != nil {
+		if errors.Is(err, ethereum.NotFound) {
+			return 0, ErrNotFound
+		}
 		return 0, errors.Wrapf(err, "failed to get TransactionReceipt for tx: %v", txHash)
 	}
 
