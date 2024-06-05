@@ -80,15 +80,11 @@ func (r *repository) InitializeMiningBoostUpgrade(ctx context.Context, miningBoo
 		return nil, errors.Errorf("current mining boost level `%v` is greater or equal than provided one `%v`", *res[0].MiningBoostLevelIndex, miningBoostLevelIndex)
 	}
 
-	var previousLevelPrices float64
+	var previousLevelPrice float64
 	if res[0].MiningBoostLevelIndex != nil {
-		for ix, level := range *r.cfg.MiningBoost.levels.Load() {
-			if ix <= int(*res[0].MiningBoostLevelIndex) {
-				previousLevelPrices += level.icePrice
-			}
-		}
+		previousLevelPrice = (*r.cfg.MiningBoost.levels.Load())[*res[0].MiningBoostLevelIndex].icePrice
 	}
-	icePrice := strconv.FormatFloat((*r.cfg.MiningBoost.levels.Load())[miningBoostLevelIndex].icePrice-previousLevelPrices, 'f', 15, 64)
+	icePrice := strconv.FormatFloat((*r.cfg.MiningBoost.levels.Load())[miningBoostLevelIndex].icePrice-previousLevelPrice, 'f', 15, 64)
 	key := fmt.Sprintf("mining_boost_upgrades:%v", id)
 	val := fmt.Sprintf("%v:%v", miningBoostLevelIndex, icePrice)
 	result, err := r.db.Set(ctx, key, val, 15*stdlibtime.Minute).Result()
@@ -174,17 +170,35 @@ func (r *repository) FinalizeMiningBoostUpgrade(ctx context.Context, network Blo
 	if res[0].MiningBoostAmountBurnt != nil {
 		amount += *res[0].MiningBoostAmountBurnt
 	}
-	newMiningBoostLevelIndex := model.FlexibleUint64(miningBoostLevelIndex)
+	var newMiningBoostLevelIndex *model.FlexibleUint64 = nil
+	if icePrice-burntAmount <= 0 {
+		targetLevel := model.FlexibleUint64(miningBoostLevelIndex)
+		newMiningBoostLevelIndex = &targetLevel
+	}
 	if extraBurntAmount := burntAmount - icePrice; extraBurntAmount > 0 {
 		for ix, level := range *r.cfg.MiningBoost.levels.Load() {
 			if ix > int(miningBoostLevelIndex) {
 				extraBurntAmount -= level.icePrice - (*r.cfg.MiningBoost.levels.Load())[ix-1].icePrice
 			}
 			if extraBurntAmount >= 0 {
-				newMiningBoostLevelIndex = model.FlexibleUint64(ix)
+				extraLevel := model.FlexibleUint64(ix)
+				newMiningBoostLevelIndex = &extraLevel
 			}
 		}
 	}
+	var prestakingBonus, prestakingAllocation float64
+	switch {
+	case newMiningBoostLevelIndex != nil:
+		prestakingBonus = float64((*r.cfg.MiningBoost.levels.Load())[int(*newMiningBoostLevelIndex)].MiningRateBonus)
+		prestakingAllocation = 100
+	case res[0].MiningBoostLevelIndex != nil:
+		prestakingBonus = float64((*r.cfg.MiningBoost.levels.Load())[int(*res[0].MiningBoostLevelIndex)].MiningRateBonus)
+		prestakingAllocation = 100
+	default:
+		prestakingBonus = 0
+		prestakingAllocation = 0
+	}
+
 	updatedState := struct {
 		model.MiningBoostLevelIndexField
 		model.MiningBoostAmountBurntField
@@ -192,12 +206,13 @@ func (r *repository) FinalizeMiningBoostUpgrade(ctx context.Context, network Blo
 		model.PreStakingBonusField
 		model.DeserializedUsersKey
 	}{
-		MiningBoostLevelIndexField:  model.MiningBoostLevelIndexField{MiningBoostLevelIndex: &newMiningBoostLevelIndex},
+		MiningBoostLevelIndexField:  model.MiningBoostLevelIndexField{MiningBoostLevelIndex: newMiningBoostLevelIndex},
 		MiningBoostAmountBurntField: model.MiningBoostAmountBurntField{MiningBoostAmountBurnt: &amount},
-		PreStakingAllocationField:   model.PreStakingAllocationField{PreStakingAllocation: 100},
-		PreStakingBonusField:        model.PreStakingBonusField{PreStakingBonus: float64((*r.cfg.MiningBoost.levels.Load())[int(newMiningBoostLevelIndex)].MiningRateBonus)},
+		PreStakingAllocationField:   model.PreStakingAllocationField{PreStakingAllocation: prestakingAllocation},
+		PreStakingBonusField:        model.PreStakingBonusField{PreStakingBonus: prestakingBonus},
 		DeserializedUsersKey:        model.DeserializedUsersKey{ID: id},
 	}
+
 	if responses, txErr := r.db.TxPipelined(ctx, func(pipeliner redis.Pipeliner) error {
 		if pErr := pipeliner.HSet(ctx, updatedState.Key(), storage.SerializeValue(updatedState)...).Err(); pErr != nil {
 			return pErr
