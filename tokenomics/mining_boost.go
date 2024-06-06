@@ -209,12 +209,35 @@ func (r *repository) FinalizeMiningBoostUpgrade(ctx context.Context, network Blo
 		DeserializedUsersKey:        model.DeserializedUsersKey{ID: id},
 	}
 
-	if hsErr := r.db.HSet(ctx, updatedState.Key(), storage.SerializeValue(updatedState)...).Err(); hsErr != nil {
+	if responses, txErr := r.db.TxPipelined(ctx, func(pipeliner redis.Pipeliner) error {
+		if pErr := pipeliner.HSet(ctx, updatedState.Key(), storage.SerializeValue(updatedState)...).Err(); pErr != nil {
+			return pErr
+		}
+		if icePrice-burntAmount > 0 {
+			val := fmt.Sprintf("%v:%v", miningBoostLevelIndex, icePrice-burntAmount)
+			return pipeliner.Set(ctx, key, val, ttl).Err()
+		}
+
+		return nil
+	}); txErr != nil {
 		rollbackCtx, rCancel := context.WithTimeout(context.Background(), 30*stdlibtime.Second)
 		defer rCancel()
 		rErr := r.rollbackTxHashUniqueness(rollbackCtx, userID, txHash)
+		return nil, errors.Wrapf(multierror.Append(txErr, rErr).ErrorOrNil(), "[1]failed to send mining boost upgrade tx pipeline for userID:%v", userID)
 
-		return nil, errors.Wrapf(multierror.Append(hsErr, rErr).ErrorOrNil(), "failed to store mining boost upgrade for userID:%v", userID)
+	} else {
+		errs := make([]error, 0, 2)
+		for _, response := range responses {
+			if err = response.Err(); err != nil {
+				errs = append(errs, errors.Wrapf(err, "failed to `%v`", response.FullName()))
+			}
+		}
+		if err = multierror.Append(nil, errs...).ErrorOrNil(); err != nil {
+			rollbackCtx, rCancel := context.WithTimeout(context.Background(), 30*stdlibtime.Second)
+			defer rCancel()
+			rErr := r.rollbackTxHashUniqueness(rollbackCtx, userID, txHash)
+			return nil, errors.Wrapf(multierror.Append(err, rErr).ErrorOrNil(), "[2]failed to send mining boost upgrade tx pipeline for userID:%v", userID)
+		}
 	}
 
 	if icePrice-burntAmount <= 0 {
