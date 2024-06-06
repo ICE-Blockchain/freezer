@@ -21,6 +21,7 @@ import (
 	detailedCoinMetrics "github.com/ice-blockchain/freezer/tokenomics/detailed_coin_metrics"
 	appCfg "github.com/ice-blockchain/wintr/config"
 	messagebroker "github.com/ice-blockchain/wintr/connectors/message_broker"
+	storagev2 "github.com/ice-blockchain/wintr/connectors/storage/v2"
 	"github.com/ice-blockchain/wintr/connectors/storage/v3"
 	"github.com/ice-blockchain/wintr/log"
 	"github.com/ice-blockchain/wintr/multimedia/picture"
@@ -65,6 +66,7 @@ func StartProcessor(ctx context.Context, cancel context.CancelFunc) Processor {
 	prc := &processor{repository: &repository{
 		cfg:                 &cfg,
 		db:                  storage.MustConnect(context.Background(), applicationYamlKey),
+		globalDB:            storagev2.MustConnect(context.Background(), globalDDL, applicationYamlKey),
 		mb:                  messagebroker.MustConnect(context.Background(), applicationYamlKey),
 		dwh:                 dwhClient,
 		pictureClient:       picture.New(applicationYamlKey),
@@ -80,7 +82,7 @@ func StartProcessor(ctx context.Context, cancel context.CancelFunc) Processor {
 	)
 	prc.shutdown = closeAll(mbConsumer, prc.mb, prc.db, func() error {
 		return prc.dwh.Close()
-	})
+	}, func() error { return prc.globalDB.Close() })
 
 	go prc.startICEPriceSyncer(ctx)
 	go prc.startDisableAdvancedTeamCfgSyncer(ctx)
@@ -109,6 +111,7 @@ func (r *repository) CheckHealth(ctx context.Context) error {
 	return multierror.Append( //nolint:wrapcheck // Not needed.
 		errors.Wrap(r.checkDBHealth(ctx), "db ping failed"),
 		errors.Wrap(r.dwh.Ping(ctx), "dwh ping failed"),
+		errors.Wrap(r.globalDB.Ping(ctx), "globalDB ping failed"),
 	).ErrorOrNil()
 }
 

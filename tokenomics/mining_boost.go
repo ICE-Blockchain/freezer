@@ -21,6 +21,7 @@ import (
 	"github.com/redis/go-redis/v9"
 
 	"github.com/ice-blockchain/freezer/model"
+	storagev2 "github.com/ice-blockchain/wintr/connectors/storage/v2"
 	"github.com/ice-blockchain/wintr/connectors/storage/v3"
 	"github.com/ice-blockchain/wintr/log"
 	"github.com/ice-blockchain/wintr/time"
@@ -148,7 +149,7 @@ func (r *repository) FinalizeMiningBoostUpgrade(ctx context.Context, network Blo
 		return nil, errors.Errorf("current mining boost level `%v` is greater or equal than provided one `%v`", *res[0].MiningBoostLevelIndex, miningBoostLevelIndex)
 	}
 	txHash = strings.ToLower(txHash)
-	burntAmount, err := r.getBurntAmountForMiningBoostUpgrade(ctx, network, txHash)
+	senderAddress, burntAmount, err := r.getSenderAndBurntAmountForMiningBoostUpgrade(ctx, network, txHash)
 	if err != nil && !errors.Is(err, ErrNotFound) {
 		return nil, errors.Wrap(err, "failed to getBurntAmountForMiningBoostUpgrade")
 	}
@@ -158,12 +159,8 @@ func (r *repository) FinalizeMiningBoostUpgrade(ctx context.Context, network Blo
 		}
 		return nil, ErrInvalidMiningBoostUpgradeTX
 	}
-
-	sKey := fmt.Sprintf("mining_boost_accepted_transactions:%v", id)
-	if _, zErr := r.db.ZRank(ctx, sKey, txHash).Result(); zErr != nil && !errors.Is(zErr, redis.Nil) {
-		return nil, errors.Errorf("failed to check uniqueness of tx hash for userID: `%v`", userID)
-	} else if zErr == nil {
-		return nil, errors.Errorf("tx hash was used before: `%v`", txHash)
+	if txErr := r.checkTxHashUniqueness(ctx, userID, txHash, senderAddress, burntAmount, miningBoostLevelIndex); txErr != nil {
+		return nil, errors.Wrapf(txErr, "failed to check uniqueness of tx hash for userID: `%v`", userID)
 	}
 
 	amount := model.FlexibleFloat64(burntAmount)
@@ -198,7 +195,6 @@ func (r *repository) FinalizeMiningBoostUpgrade(ctx context.Context, network Blo
 		prestakingBonus = 0
 		prestakingAllocation = 0
 	}
-
 	updatedState := struct {
 		model.MiningBoostLevelIndexField
 		model.MiningBoostAmountBurntField
@@ -213,30 +209,12 @@ func (r *repository) FinalizeMiningBoostUpgrade(ctx context.Context, network Blo
 		DeserializedUsersKey:        model.DeserializedUsersKey{ID: id},
 	}
 
-	if responses, txErr := r.db.TxPipelined(ctx, func(pipeliner redis.Pipeliner) error {
-		if pErr := pipeliner.HSet(ctx, updatedState.Key(), storage.SerializeValue(updatedState)...).Err(); pErr != nil {
-			return pErr
-		}
+	if hsErr := r.db.HSet(ctx, updatedState.Key(), storage.SerializeValue(updatedState)...).Err(); hsErr != nil {
+		rollbackCtx, rCancel := context.WithTimeout(context.Background(), 30*stdlibtime.Second)
+		defer rCancel()
+		rErr := r.rollbackTxHashUniqueness(rollbackCtx, userID, txHash)
 
-		member := redis.Z{
-			Score:  float64(time.Now().UnixNano()),
-			Member: txHash,
-		}
-
-		return pipeliner.ZAddNX(ctx, sKey, member).Err()
-	}); txErr != nil {
-		return nil, errors.Wrapf(err, "[1]failed to send mining boost upgrade tx pipeline for userID:%v", userID)
-
-	} else {
-		errs := make([]error, 0, 2)
-		for _, response := range responses {
-			if err = response.Err(); err != nil {
-				errs = append(errs, errors.Wrapf(err, "failed to `%v`", response.FullName()))
-			}
-		}
-		if err = multierror.Append(nil, errs...).ErrorOrNil(); err != nil {
-			return nil, errors.Wrapf(err, "[2]failed to send mining boost upgrade tx pipeline for userID:%v", userID)
-		}
+		return nil, errors.Wrapf(multierror.Append(hsErr, rErr).ErrorOrNil(), "failed to store mining boost upgrade for userID:%v", userID)
 	}
 
 	if icePrice-burntAmount <= 0 {
@@ -250,50 +228,77 @@ func (r *repository) FinalizeMiningBoostUpgrade(ctx context.Context, network Blo
 	}, nil
 }
 
+//nolint:revive // .
+func (r *repository) checkTxHashUniqueness(ctx context.Context, userID, txHash, senderAddress string, burntAmount float64, miningBoostLevelIndex uint64) error {
+	if _, err := storagev2.Exec(ctx, r.globalDB,
+		`INSERT INTO mining_boost_accepted_transactions (created_at, mining_boost_level, tenant, tx_hash, ice_amount, sender_address, user_id)
+            VALUES($1, $2, $3, $4, $5, $6, $7);`,
+		*time.Now().Time, miningBoostLevelIndex, r.cfg.Tenant, txHash, strconv.FormatFloat(burntAmount, 'f', 15, 64), senderAddress, userID); err != nil {
+		if storagev2.IsErr(err, storagev2.ErrDuplicate) { //nolint:nestif // .
+			if storagev2.IsErr(err, storagev2.ErrDuplicate, "tx_hash") || storagev2.IsErr(err, storagev2.ErrDuplicate, "pk") { //nolint:gocritic // .
+				return errors.Wrapf(err, "tx hash was used before: `%v`", txHash)
+			}
+		}
+
+		return errors.Wrapf(err, "failed to check uniqueness of tx hash for userID: `%v txHash %v`", userID, txHash)
+	}
+
+	return nil
+}
+func (r *repository) rollbackTxHashUniqueness(ctx context.Context, userID, txHash string) error {
+	if _, err := storagev2.Exec(ctx, r.globalDB,
+		`DELETE FROM mining_boost_accepted_transactions WHERE user_id = $1 and tx_hash = $2;`,
+		userID, txHash); err != nil {
+		return errors.Wrapf(err, "failed to rollback unique tx for userID %v txHash %v", userID, txHash)
+	}
+
+	return nil
+}
+
 const (
 	erc20ABI = `[{"constant":true,"inputs":[{"name":"","type":"address"}],"name":"balanceOf","outputs":[{"name":"","type":"uint256"}],"type":"function"},{"constant":false,"inputs":[{"name":"_to","type":"address"},{"name":"_value","type":"uint256"}],"name":"transfer","outputs":[{"name":"","type":"bool"}],"type":"function"},{"anonymous":false,"inputs":[{"indexed":true,"name":"from","type":"address"},{"indexed":true,"name":"to","type":"address"},{"indexed":false,"name":"value","type":"uint256"}],"name":"Transfer","type":"event"}]`
 )
 
-func (r *repository) getBurntAmountForMiningBoostUpgrade(ctx context.Context, network BlockchainNetworkType, txHash string) (float64, error) {
+func (r *repository) getSenderAndBurntAmountForMiningBoostUpgrade(ctx context.Context, network BlockchainNetworkType, txHash string) (string, float64, error) {
 	networkClient := r.cfg.MiningBoost.networkClients[network][r.cfg.MiningBoost.networkEndpointCurrentLBIndex[network].Add(1)%uint64(len(r.cfg.MiningBoost.networkClients[network]))] //nolint:lll // .
 
 	receipt, err := networkClient.TransactionReceipt(ctx, ethcommon.HexToHash(txHash))
 	if err != nil {
 		if errors.Is(err, ethereum.NotFound) {
-			return 0, ErrNotFound
+			return "", 0, ErrNotFound
 		}
-		return 0, errors.Wrapf(err, "failed to get TransactionReceipt for tx: %v", txHash)
+		return "", 0, errors.Wrapf(err, "failed to get TransactionReceipt for tx: %v", txHash)
 	}
 
 	parsedABI, err := ethabi.JSON(strings.NewReader(erc20ABI))
 	if err != nil {
-		return 0, errors.Wrapf(err, "failed to parse erc 20 ABI for tx: %v", txHash)
+		return "", 0, errors.Wrapf(err, "failed to parse erc 20 ABI for tx: %v", txHash)
 	}
 
 	for _, vLog := range receipt.Logs {
 		if event, evErr := parsedABI.EventByID(vLog.Topics[0]); evErr != nil {
-			return 0, errors.Wrapf(evErr, "failed to get EventByID: %#v", vLog)
+			return "", 0, errors.Wrapf(evErr, "failed to get EventByID: %#v", vLog)
 		} else if event.Name != "Transfer" {
 			continue
 		}
 
 		if vLog.Address != ethcommon.HexToAddress(r.cfg.MiningBoost.ContractAddresses[network]) {
-			return 0, nil
+			return "", 0, nil
 		}
 
 		var transferEvent struct{ Value *big.Int }
 		if evErr := parsedABI.UnpackIntoInterface(&transferEvent, "Transfer", vLog.Data); evErr != nil {
-			return 0, errors.Wrapf(evErr, "failed to get UnpackIntoInterface[%#v]: %#v", &transferEvent, vLog)
+			return "", 0, errors.Wrapf(evErr, "failed to get UnpackIntoInterface[%#v]: %#v", &transferEvent, vLog)
 		}
 
 		if ethcommon.HexToAddress(vLog.Topics[2].Hex()) == r.cfg.MiningBoost.paymentAddress && transferEvent.Value.Cmp(new(big.Int).SetUint64(0)) > 0 {
 			amount, _ := transferEvent.Value.Float64()
-
-			return amount / iceFlakesDenomination, nil
+			sender := vLog.Topics[1].Hex()
+			return sender, amount / iceFlakesDenomination, nil
 		}
 	}
 
-	return 0, nil
+	return "", 0, nil
 }
 
 const iceFlakesDenomination = 1_000_000_000_000_000_000

@@ -76,6 +76,7 @@ tokenomics: &tokenomics
     milestones: 7
     durationBetweenMilestones: 3m
   blockchain-coin-stats-json-url: https://ice-staging.b-cdn.net/assets/auth-config.json
+  tenant: generic
   kyc:
     try-reset-kyc-steps-url: https://something.example.com
     config-json-url: https://ice-staging.b-cdn.net/something/somebogus.json
@@ -97,6 +98,15 @@ tokenomics: &tokenomics
       password:
   wintr/connectors/storage/v3:
     url: redis://default:@localhost:6379
+  wintr/connectors/storage/v2: &globalDB
+    runDDL: true
+    primaryURL: postgresql://root:pass@localhost:5436/freezer-global
+    timeout: 90s
+    credentials:
+      user: root
+      password: pass
+    replicaURLs:
+      - postgresql://root:pass@localhost:5436/freezer-global
   messageBroker: &tokenomicsMessageBroker
     consumerGroup: freezer-local
     createTopics: true

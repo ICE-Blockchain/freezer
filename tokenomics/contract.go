@@ -18,6 +18,7 @@ import (
 	extrabonusnotifier "github.com/ice-blockchain/freezer/extra-bonus-notifier"
 	detailedCoinMetrics "github.com/ice-blockchain/freezer/tokenomics/detailed_coin_metrics"
 	messagebroker "github.com/ice-blockchain/wintr/connectors/message_broker"
+	storagev2 "github.com/ice-blockchain/wintr/connectors/storage/v2"
 	"github.com/ice-blockchain/wintr/connectors/storage/v3"
 	"github.com/ice-blockchain/wintr/multimedia/picture"
 	"github.com/ice-blockchain/wintr/time"
@@ -300,6 +301,7 @@ type (
 		extraBonusIndicesDistribution     map[uint16]map[uint16]uint16
 		shutdown                          func() error
 		db                                storage.DB
+		globalDB                          *storagev2.DB
 		dwh                               dwh.Client
 		mb                                messagebroker.Client
 		pictureClient                     picture.Client
@@ -358,7 +360,6 @@ type (
 			CoinsAdded float64    `json:"coinsAdded"`
 		} `json:"coinsAddedHistory"`
 	}
-
 	Config struct {
 		disableAdvancedTeam     *atomic.Pointer[[]string]
 		kycConfigJSON           *atomic.Pointer[kycConfigJSON]
@@ -422,5 +423,11 @@ type (
 			T2 uint32 `yaml:"t2"`
 		} `yaml:"referralBonusMiningRates"`
 		SlashingFloor float64 `yaml:"slashingFloor" mapstructure:"slashingFloor"`
+		Tenant        string  `yaml:"tenant"`
 	}
+)
+
+var (
+	//go:embed globalDDL.sql
+	globalDDL string
 )
