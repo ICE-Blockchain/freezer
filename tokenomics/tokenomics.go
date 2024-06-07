@@ -108,11 +108,15 @@ func (r *repository) Close() error {
 }
 
 func (r *repository) CheckHealth(ctx context.Context) error {
-	return multierror.Append( //nolint:wrapcheck // Not needed.
+	mErr := multierror.Append( //nolint:wrapcheck // Not needed.
 		errors.Wrap(r.checkDBHealth(ctx), "db ping failed"),
 		errors.Wrap(r.dwh.Ping(ctx), "dwh ping failed"),
-		errors.Wrap(r.globalDB.Ping(ctx), "globalDB ping failed"),
-	).ErrorOrNil()
+	)
+	if r.globalDB != nil {
+		mErr = multierror.Append(mErr, errors.Wrap(r.globalDB.Ping(ctx), "globalDB ping failed"))
+	}
+
+	return mErr.ErrorOrNil()
 }
 
 func closeAll(mbConsumer, mbProducer messagebroker.Client, db storage.DB, otherClosers ...func() error) func() error {
