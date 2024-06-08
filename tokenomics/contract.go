@@ -271,6 +271,7 @@ const (
 	totalCoinStatsDetailsLockKey      = "totalCoinStatsDetails"
 	totalCoinStatsDetailsLockDuration = 1 * stdlibtime.Minute
 	totalCoinStatsDetailsKey          = "totalCoinStatsDetailsData"
+	miningBoostPricePrecision         = 4 // 4 digits after floating point.
 )
 
 type (

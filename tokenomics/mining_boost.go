@@ -5,6 +5,7 @@ package tokenomics
 import (
 	"context"
 	"fmt"
+	"math"
 	"math/big"
 	"sort"
 	"strconv"
@@ -85,7 +86,7 @@ func (r *repository) InitializeMiningBoostUpgrade(ctx context.Context, miningBoo
 	if res[0].MiningBoostLevelIndex != nil {
 		previousLevelPrice = (*r.cfg.MiningBoost.levels.Load())[*res[0].MiningBoostLevelIndex].icePrice
 	}
-	icePrice := strconv.FormatFloat((*r.cfg.MiningBoost.levels.Load())[miningBoostLevelIndex].icePrice-previousLevelPrice, 'f', 15, 64)
+	icePrice := strconv.FormatFloat((*r.cfg.MiningBoost.levels.Load())[miningBoostLevelIndex].icePrice-previousLevelPrice, 'f', miningBoostPricePrecision, 64)
 	key := fmt.Sprintf("mining_boost_upgrades:%v", id)
 	val := fmt.Sprintf("%v:%v", miningBoostLevelIndex, icePrice)
 	result, err := r.db.Set(ctx, key, val, 15*stdlibtime.Minute).Result()
@@ -246,7 +247,7 @@ func (r *repository) FinalizeMiningBoostUpgrade(ctx context.Context, network Blo
 
 	return &PendingMiningBoostUpgrade{
 		ExpiresAt:      time.New(stdlibtime.Unix(0, expireAt.UnixNano())),
-		ICEPrice:       strconv.FormatFloat(icePrice-burntAmount, 'f', 15, 64),
+		ICEPrice:       strconv.FormatFloat(icePrice-burntAmount, 'f', miningBoostPricePrecision, 64),
 		PaymentAddress: r.cfg.MiningBoost.PaymentAddress,
 	}, nil
 }
@@ -373,8 +374,8 @@ func (r *repository) buildMiningBoostLevels() *[]*MiningBoostLevel {
 	levels := make([]*MiningBoostLevel, 0, len(r.cfg.MiningBoost.Levels))
 	for dollars, level := range r.cfg.MiningBoost.Levels {
 		clone := *level
-		clone.icePrice = dollars / *r.cfg.MiningBoost.icePrice.Load()
-		clone.ICEPrice = strconv.FormatFloat(clone.icePrice, 'f', 15, 64)
+		clone.icePrice = math.Floor(dollars / *r.cfg.MiningBoost.icePrice.Load() * math.Pow10(miningBoostPricePrecision)) / math.Pow10(miningBoostPricePrecision)
+		clone.ICEPrice = strconv.FormatFloat(clone.icePrice, 'f', miningBoostPricePrecision, 64)
 		levels = append(levels, &clone)
 	}
 	sort.SliceStable(levels, func(ii, jj int) bool { return levels[ii].icePrice < levels[jj].icePrice })
