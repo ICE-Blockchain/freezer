@@ -369,6 +369,7 @@ type (
 			NetworkEndpoints              map[BlockchainNetworkType][]string            `yaml:"networkEndpoints" mapstructure:"networkEndpoints"`
 			ContractAddresses             map[BlockchainNetworkType]string              `yaml:"contractAddresses" mapstructure:"contractAddresses"`
 			Levels                        map[float64]*MiningBoostLevel                 `yaml:"levels" mapstructure:"levels"`
+			SessionLength                 stdlibtime.Duration                           `yaml:"sessionLength" mapstructure:"sessionLength"`
 			PaymentAddress                string                                        `yaml:"paymentAddress" mapstructure:"paymentAddress"`
 			paymentAddress                ethcommon.Address                             `yaml:"-" mapstructure:"-" json:"-"`
 			PriceDelta                    uint8                                         `yaml:"priceDelta" mapstructure:"priceDelta"`

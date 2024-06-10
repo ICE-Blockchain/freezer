@@ -32,6 +32,7 @@ cmd/freezer-refrigerant:
     jwtSecret: bogus
 mining-boost: &mining-boost
   priceDelta: 10
+  sessionLength: 15m
   levels:
     1.0:
       miningSessionLengthSeconds: 60

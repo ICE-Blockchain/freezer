@@ -101,7 +101,7 @@ func (r *repository) InitializeMiningBoostUpgrade(ctx context.Context, miningBoo
 	storedPrice := strconv.FormatFloat(upgradePrice, 'f', miningBoostPricePrecision, 64)
 	key := fmt.Sprintf("mining_boost_upgrades:%v", id)
 	val := fmt.Sprintf("%v:%v", miningBoostLevelIndex, storedPrice)
-	result, err := r.db.Set(ctx, key, val, 15*stdlibtime.Minute).Result()
+	result, err := r.db.Set(ctx, key, val, r.cfg.MiningBoost.SessionLength).Result()
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to set new mining_boost_upgrade for userID:%v", userID)
 	}
