@@ -329,7 +329,8 @@ type (
 		Social1KYC struct {
 			DisabledVersions   []string `json:"disabledVersions"`
 			ForceKYCForUserIds []string `json:"forceKYCForUserIds"`
-			Enabled            bool     `json:"enabled"`
+			EnabledMobile      bool     `json:"enabledMobile"`
+			EnabledWeb         bool     `json:"enabledWeb"`
 		} `json:"social1-kyc"`
 		QuizKYC struct {
 			DisabledVersions   []string `json:"disabledVersions"`
@@ -339,20 +340,15 @@ type (
 		Social2KYC struct {
 			DisabledVersions   []string `json:"disabledVersions"`
 			ForceKYCForUserIds []string `json:"forceKYCForUserIds"`
-			Enabled            bool     `json:"enabled"`
+			EnabledMobile      bool     `json:"enabledMobile"`
+			EnabledWeb         bool     `json:"enabledWeb"`
 		} `json:"social2-kyc"`
 		WebFaceAuth struct {
 			Enabled bool `json:"enabled"`
 		} `json:"web-face-auth"`
-		WebSocial1KYC struct {
-			Enabled bool `json:"enabled"`
-		} `json:"web-social1-kyc"`
 		WebQuizKYC struct {
 			Enabled bool `json:"enabled"`
 		} `json:"web-quiz-kyc"`
-		WebSocial2KYC struct {
-			Enabled bool `json:"enabled"`
-		} `json:"web-social2-kyc"`
 	}
 
 	blockchainCoinStatsJSON struct {

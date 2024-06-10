@@ -248,13 +248,13 @@ func (r *repository) isKYCEnabled(ctx context.Context, latestDevice string, kycS
 		}
 		return true
 	case users.Social1KYCStep:
-		if isWeb && !kycConfig.WebSocial1KYC.Enabled {
+		if isWeb && !kycConfig.Social1KYC.EnabledWeb {
 			return false
 		}
-		if !isWeb && !kycConfig.Social1KYC.Enabled {
+		if !isWeb && !kycConfig.Social1KYC.EnabledMobile {
 			return false
 		}
-		if !isWeb && kycConfig.Social1KYC.Enabled && !r.isKycStepEnabledForDevice(users.Social1KYCStep, latestDevice) {
+		if !isWeb && kycConfig.Social1KYC.EnabledMobile && !r.isKycStepEnabledForDevice(users.Social1KYCStep, latestDevice) {
 			return false
 		}
 	case users.QuizKYCStep:
@@ -268,13 +268,13 @@ func (r *repository) isKYCEnabled(ctx context.Context, latestDevice string, kycS
 			return false
 		}
 	case users.Social2KYCStep:
-		if isWeb && !kycConfig.WebSocial2KYC.Enabled {
+		if isWeb && !kycConfig.Social2KYC.EnabledWeb {
 			return false
 		}
-		if !isWeb && !kycConfig.Social2KYC.Enabled {
+		if !isWeb && !kycConfig.Social2KYC.EnabledMobile {
 			return false
 		}
-		if !isWeb && kycConfig.Social2KYC.Enabled && !r.isKycStepEnabledForDevice(users.Social2KYCStep, latestDevice) {
+		if !isWeb && kycConfig.Social2KYC.EnabledMobile && !r.isKycStepEnabledForDevice(users.Social2KYCStep, latestDevice) {
 			return false
 		}
 	default:
