@@ -64,6 +64,7 @@ const (
 	extraBonusAlreadyClaimedErrorCode             = "EXTRA_BONUS_ALREADY_CLAIMED"
 	noPendingMiningBoostUpgradeFoundErrorCode     = "NO_PENDING_MINING_BOOST_UPGRADE_FOUND"
 	invalidMiningBoostUpgradeTransactionErrorCode = "INVALID_MINING_BOOST_UPGRADE_TRANSACTION"
+	transactionAlreadyUsed                        = "TRANSACTION_ALREADY_USED"
 
 	defaultDistributionLimit = 5000
 )

@@ -92,6 +92,8 @@ func (s *service) FinalizeMiningBoostUpgrade( //nolint:gocritic // False negativ
 			return nil, server.NotFound(err, noPendingMiningBoostUpgradeFoundErrorCode)
 		case errors.Is(err, tokenomics.ErrRelationNotFound):
 			return nil, server.NotFound(err, userNotFoundErrorCode)
+		case errors.Is(err, tokenomics.ErrDuplicate):
+			return nil, server.Conflict(err, transactionAlreadyUsed)
 		default:
 			return nil, server.Unexpected(err)
 		}

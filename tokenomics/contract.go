@@ -371,6 +371,7 @@ type (
 			Levels                        map[float64]*MiningBoostLevel                 `yaml:"levels" mapstructure:"levels"`
 			PaymentAddress                string                                        `yaml:"paymentAddress" mapstructure:"paymentAddress"`
 			paymentAddress                ethcommon.Address                             `yaml:"-" mapstructure:"-" json:"-"`
+			PriceDelta                    uint8                                         `yaml:"priceDelta" mapstructure:"priceDelta"`
 		} `yaml:"mining-boost" mapstructure:"mining-boost"`
 		BlockchainCoinStatsJSONURL          string `yaml:"blockchain-coin-stats-json-url" mapstructure:"blockchain-coin-stats-json-url"`
 		extrabonusnotifier.ExtraBonusConfig `mapstructure:",squash"`

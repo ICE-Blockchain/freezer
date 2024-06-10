@@ -44,15 +44,26 @@ func (r *repository) GetMiningBoostSummary(ctx context.Context, userID string) (
 
 		return nil, errors.Wrapf(err, "failed to get mining boost info for id:%v", id)
 	}
-
+	var previousLevelPrice float64
 	var currentLevelIndex *uint8
 	if res[0].MiningBoostLevelIndex != nil {
 		val := uint8(*res[0].MiningBoostLevelIndex)
 		currentLevelIndex = &val
+		previousLevelPrice = (*r.cfg.MiningBoost.levels.Load())[*res[0].MiningBoostLevelIndex].icePrice
 	}
 
+	levels := make([]*MiningBoostLevel, 0, len(*r.cfg.MiningBoost.levels.Load()))
+	for _, lvl := range *r.cfg.MiningBoost.levels.Load() {
+		clone := *lvl
+		diff := lvl.icePrice - previousLevelPrice
+		if diff < 0 {
+			diff = 0
+		}
+		clone.ICEPrice = strconv.FormatFloat(diff*(1+(float64(r.cfg.MiningBoost.PriceDelta)/100)), 'f', miningBoostPricePrecision, 64)
+		levels = append(levels, &clone)
+	}
 	return &MiningBoostSummary{
-		Levels:            *r.cfg.MiningBoost.levels.Load(),
+		Levels:            levels,
 		CurrentLevelIndex: currentLevelIndex,
 	}, nil
 }
@@ -86,9 +97,10 @@ func (r *repository) InitializeMiningBoostUpgrade(ctx context.Context, miningBoo
 	if res[0].MiningBoostLevelIndex != nil {
 		previousLevelPrice = (*r.cfg.MiningBoost.levels.Load())[*res[0].MiningBoostLevelIndex].icePrice
 	}
-	icePrice := strconv.FormatFloat((*r.cfg.MiningBoost.levels.Load())[miningBoostLevelIndex].icePrice-previousLevelPrice, 'f', miningBoostPricePrecision, 64)
+	upgradePrice := (*r.cfg.MiningBoost.levels.Load())[miningBoostLevelIndex].icePrice - previousLevelPrice
+	storedPrice := strconv.FormatFloat(upgradePrice, 'f', miningBoostPricePrecision, 64)
 	key := fmt.Sprintf("mining_boost_upgrades:%v", id)
-	val := fmt.Sprintf("%v:%v", miningBoostLevelIndex, icePrice)
+	val := fmt.Sprintf("%v:%v", miningBoostLevelIndex, storedPrice)
 	result, err := r.db.Set(ctx, key, val, 15*stdlibtime.Minute).Result()
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to set new mining_boost_upgrade for userID:%v", userID)
@@ -96,7 +108,7 @@ func (r *repository) InitializeMiningBoostUpgrade(ctx context.Context, miningBoo
 	if result != "OK" {
 		return nil, errors.Errorf("unexpected db response while trying to set new mining_boost_upgrade for userID:%v, %v", userID, result)
 	}
-
+	icePrice := strconv.FormatFloat(upgradePrice*(1+(float64(r.cfg.MiningBoost.PriceDelta)/100)), 'f', miningBoostPricePrecision, 64)
 	return &PendingMiningBoostUpgrade{
 		ExpiresAt:      time.New(stdlibtime.Now().Add(15 * stdlibtime.Minute)),
 		ICEPrice:       icePrice,
@@ -244,10 +256,11 @@ func (r *repository) FinalizeMiningBoostUpgrade(ctx context.Context, network Blo
 	if icePrice-burntAmount <= 0 {
 		return nil, nil
 	}
+	remainingPayment := icePrice - burntAmount
 
 	return &PendingMiningBoostUpgrade{
 		ExpiresAt:      time.New(stdlibtime.Unix(0, expireAt.UnixNano())),
-		ICEPrice:       strconv.FormatFloat(icePrice-burntAmount, 'f', miningBoostPricePrecision, 64),
+		ICEPrice:       strconv.FormatFloat(remainingPayment*(1+(float64(r.cfg.MiningBoost.PriceDelta)/100)), 'f', miningBoostPricePrecision, 64),
 		PaymentAddress: r.cfg.MiningBoost.PaymentAddress,
 	}, nil
 }
@@ -259,8 +272,8 @@ func (r *repository) checkTxHashUniqueness(ctx context.Context, userID, txHash, 
             VALUES($1, $2, $3, $4, $5, $6, $7);`,
 		*time.Now().Time, miningBoostLevelIndex, r.cfg.Tenant, txHash, strconv.FormatFloat(burntAmount, 'f', 15, 64), senderAddress, userID); err != nil {
 		if storagev2.IsErr(err, storagev2.ErrDuplicate) { //nolint:nestif // .
-			if storagev2.IsErr(err, storagev2.ErrDuplicate, "tx_hash") || storagev2.IsErr(err, storagev2.ErrDuplicate, "pk") { //nolint:gocritic // .
-				return errors.Wrapf(err, "tx hash was used before: `%v`", txHash)
+			if storagev2.IsErr(err, storagev2.ErrDuplicate, "txhash") || storagev2.IsErr(err, storagev2.ErrDuplicate, "pk") { //nolint:gocritic // .
+				return ErrDuplicate
 			}
 		}
 
@@ -375,7 +388,7 @@ func (r *repository) buildMiningBoostLevels() *[]*MiningBoostLevel {
 	for dollars, level := range r.cfg.MiningBoost.Levels {
 		clone := *level
 		clone.icePrice = math.Floor(dollars / *r.cfg.MiningBoost.icePrice.Load() * math.Pow10(miningBoostPricePrecision)) / math.Pow10(miningBoostPricePrecision)
-		clone.ICEPrice = strconv.FormatFloat(clone.icePrice, 'f', miningBoostPricePrecision, 64)
+		clone.ICEPrice = strconv.FormatFloat(clone.icePrice*(1+(float64(r.cfg.MiningBoost.PriceDelta)/100)), 'f', miningBoostPricePrecision, 64)
 		levels = append(levels, &clone)
 	}
 	sort.SliceStable(levels, func(ii, jj int) bool { return levels[ii].icePrice < levels[jj].icePrice })
