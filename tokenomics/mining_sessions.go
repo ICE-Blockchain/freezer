@@ -110,13 +110,15 @@ func (r *repository) StartNewMiningSession( //nolint:funlen,gocognit // A lot of
 		previouslyEndedAt = old[0].MiningSessionSoloEndedAt
 	}
 	sess := &MiningSession{
-		LastNaturalMiningStartedAt: newMS.MiningSessionSoloLastStartedAt,
-		StartedAt:                  startedAt,
-		EndedAt:                    newMS.MiningSessionSoloEndedAt,
-		PreviouslyEndedAt:          previouslyEndedAt,
-		Extension:                  extension,
-		MiningStreak:               r.calculateMiningStreak(now, startedAt, newMS.MiningSessionSoloEndedAt),
-		UserID:                     &userID,
+		LastNaturalMiningStartedAt:    newMS.MiningSessionSoloLastStartedAt,
+		StartedAt:                     startedAt,
+		EndedAt:                       newMS.MiningSessionSoloEndedAt,
+		PreviouslyEndedAt:             previouslyEndedAt,
+		Extension:                     extension,
+		MiningStreak:                  r.calculateMiningStreak(now, startedAt, newMS.MiningSessionSoloEndedAt),
+		UserID:                        &userID,
+		ResettableStartingAt:          time.New(startedAt.Add(r.cfg.MiningSessionDuration.Min)),
+		WarnAboutExpirationStartingAt: time.New(startedAt.Add(r.cfg.maxMiningSessionDuration(old[0].MiningBoostLevelIndexField) - r.cfg.MiningSessionDuration.Max).Add(r.cfg.MiningSessionDuration.WarnAboutExpirationAfter)),
 	}
 	if err = r.sendMiningSessionMessage(ctx, sess); err != nil {
 		return errors.Wrapf(err, "failed to sendMiningSessionMessage:%#v", sess)
