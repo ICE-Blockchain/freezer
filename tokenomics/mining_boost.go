@@ -110,7 +110,7 @@ func (r *repository) InitializeMiningBoostUpgrade(ctx context.Context, miningBoo
 	}
 	icePrice := strconv.FormatFloat(upgradePrice*(1+(float64(r.cfg.MiningBoost.PriceDelta)/100)), 'f', miningBoostPricePrecision, 64)
 	return &PendingMiningBoostUpgrade{
-		ExpiresAt:      time.New(stdlibtime.Now().Add(15 * stdlibtime.Minute)),
+		ExpiresAt:      time.New(stdlibtime.Now().Add(r.cfg.MiningBoost.SessionLength)),
 		ICEPrice:       icePrice,
 		PaymentAddress: r.cfg.MiningBoost.PaymentAddress,
 	}, nil
