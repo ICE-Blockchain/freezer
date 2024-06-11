@@ -98,7 +98,6 @@ func StartProcessor(ctx context.Context, cancel context.CancelFunc) Processor {
 	prc.livenessLoadDistributionStartDate = mustGetLivenessLoadDistributionStartDate(ctx, prc.db)
 	log.Info(fmt.Sprintf("configuration loaded[livenessLoadDistributionStartDate]: %#v", prc.livenessLoadDistributionStartDate))
 	log.Info(fmt.Sprintf("configuration loaded[FaceRecognitionDelay]: %#v", cfg.KYC.FaceRecognitionDelay))
-	log.Info(fmt.Sprintf("configuration loaded[LivenessDelay]: %#v", cfg.KYC.LivenessDelay))
 	log.Info(fmt.Sprintf("configuration loaded[Adoption]: %#v", cfg.Adoption))
 	log.Info(fmt.Sprintf("configuration loaded[MiningBoost]: %#v", cfg.MiningBoost))
 	log.Info(fmt.Sprintf("configuration loaded[ExtraBonuses]: %#v", cfg.ExtraBonuses))

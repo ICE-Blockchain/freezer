@@ -388,7 +388,6 @@ type (
 			FaceAuthAvailabilityURL            string              `yaml:"face-auth-availability-url" mapstructure:"face-auth-availability-url"`
 			ConfigJSONURL                      string              `yaml:"config-json-url" mapstructure:"config-json-url"`
 			FaceRecognitionDelay               stdlibtime.Duration `yaml:"face-recognition-delay" mapstructure:"face-recognition-delay"`
-			LivenessDelay                      stdlibtime.Duration `yaml:"liveness-delay" mapstructure:"liveness-delay"`
 			Social1Delay                       stdlibtime.Duration `yaml:"social1-delay" mapstructure:"social1-delay"`
 			Social2Delay                       stdlibtime.Duration `yaml:"social2-delay" mapstructure:"social2-delay"`
 			DynamicSocialDelay                 stdlibtime.Duration `yaml:"dynamic-social-delay" mapstructure:"dynamic-social-delay"`

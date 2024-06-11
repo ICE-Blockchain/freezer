@@ -134,15 +134,7 @@ func (r *repository) checkNextKYCStep(ctx context.Context, state *getCurrentMini
 			})
 		}
 	case users.FacialRecognitionKYCStep:
-		if r.isKYCStepForced(users.LivenessDetectionKYCStep, state.UserID) || (r.isKYCEnabled(ctx, state.LatestDevice, users.LivenessDetectionKYCStep) && faceKycAvailable && state.KYCStepBlocked != users.LivenessDetectionKYCStep) { //nolint:lll // .
-			return terror.New(ErrKYCRequired, map[string]any{
-				"kycSteps": []users.KYCStep{users.LivenessDetectionKYCStep},
-			})
-		}
 	case users.LivenessDetectionKYCStep:
-		if err := r.verifyLivenessKYC(ctx, state, faceKycAvailable); err != nil {
-			return err
-		}
 		social1Required := (state.KYCStepAttempted(users.Social1KYCStep-1) && state.KYCStepNotAttempted(users.Social1KYCStep) && int64((time.Now().Sub(*r.livenessLoadDistributionStartDate.Time)%(2*r.cfg.KYC.Social1Delay))/r.cfg.MiningSessionDuration.Max) >= state.ID%int64((2*r.cfg.KYC.Social1Delay)/r.cfg.MiningSessionDuration.Max)) || //nolint:lll // .
 			state.DelayPassedSinceLastKYCStepAttempt(users.Social1KYCStep, r.cfg.KYC.Social1Delay)
 		minDelaySinceLastLiveness := state.DelayPassedSinceLastKYCStepAttempt(users.LivenessDetectionKYCStep, r.cfg.MiningSessionDuration.Min)
@@ -153,13 +145,7 @@ func (r *repository) checkNextKYCStep(ctx context.Context, state *getCurrentMini
 			})
 		}
 	case users.Social1KYCStep:
-		if err := r.verifyLivenessKYC(ctx, state, faceKycAvailable); err != nil {
-			return err
-		}
 	case users.QuizKYCStep:
-		if err := r.verifyLivenessKYC(ctx, state, faceKycAvailable); err != nil {
-			return err
-		}
 		social2Required := (state.KYCStepAttempted(users.Social2KYCStep-1) && state.KYCStepNotAttempted(users.Social2KYCStep)) ||
 			state.DelayPassedSinceLastKYCStepAttempt(users.Social2KYCStep, r.cfg.KYC.Social2Delay)
 		minDelaySinceLastLiveness := state.DelayPassedSinceLastKYCStepAttempt(users.LivenessDetectionKYCStep, r.cfg.MiningSessionDuration.Min)
@@ -170,9 +156,6 @@ func (r *repository) checkNextKYCStep(ctx context.Context, state *getCurrentMini
 			})
 		}
 	default:
-		if err := r.verifyLivenessKYC(ctx, state, faceKycAvailable); err != nil || r.isLastKYCStep(state.KYCStepPassed) {
-			return err
-		}
 		nextKYCStep := state.KYCStepPassed + 1
 		dynamicSocialXRequired := (state.KYCStepAttempted(state.KYCStepPassed) && state.KYCStepNotAttempted(nextKYCStep)) ||
 			state.DelayPassedSinceLastKYCStepAttempt(nextKYCStep, r.cfg.KYC.DynamicSocialDelay)
@@ -199,21 +182,6 @@ func (r *repository) isLastKYCStep(kycStep users.KYCStep) bool {
 	}
 
 	return kycStep == lastKYCStep
-}
-
-func (r *repository) verifyLivenessKYC(ctx context.Context, state *getCurrentMiningSession, faceKycAvailable bool) error {
-	var (
-		isAfterDelay           = state.DelayPassedSinceLastKYCStepAttempt(users.LivenessDetectionKYCStep, r.cfg.KYC.LivenessDelay)
-		isNetworkDelayAdjusted = state.DelayPassedSinceLastKYCStepAttempt(users.LivenessDetectionKYCStep, r.cfg.MiningSessionDuration.Max)
-		isReservedForToday     = r.cfg.KYC.LivenessDelay > r.cfg.MiningSessionDuration.Max && int64((time.Now().Sub(*r.livenessLoadDistributionStartDate.Time)%r.cfg.KYC.LivenessDelay)/r.cfg.MiningSessionDuration.Max) == state.ID%int64(r.cfg.KYC.LivenessDelay/r.cfg.MiningSessionDuration.Max) //nolint:lll // .
-	)
-	if isNetworkDelayAdjusted && (isAfterDelay || isReservedForToday) && r.isKYCEnabled(ctx, state.LatestDevice, users.LivenessDetectionKYCStep) && faceKycAvailable {
-		return terror.New(ErrKYCRequired, map[string]any{
-			"kycSteps": []users.KYCStep{users.LivenessDetectionKYCStep},
-		})
-	}
-
-	return nil
 }
 
 func (r *repository) isQuizRequired(state *getCurrentMiningSession) bool {
