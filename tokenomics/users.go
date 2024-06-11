@@ -224,7 +224,7 @@ func (s *usersTableSource) replaceUser(ctx context.Context, usr *users.User) err
 		newPartialState.MiningBlockchainAccountAddress != dbUser[0].MiningBlockchainAccountAddress ||
 		newPartialState.BlockchainAccountAddress != dbUser[0].BlockchainAccountAddress ||
 		newPartialState.HideRanking != dbUser[0].HideRanking ||
-		!newPartialState.CreatedAt.Equal(*dbUser[0].CreatedAt.Time) ||
+		(dbUser[0].CreatedAt.IsNil() || !newPartialState.CreatedAt.Equal(*dbUser[0].CreatedAt.Time)) ||
 		!newPartialState.KYCStepsCreatedAt.Equals(dbUser[0].KYCStepsCreatedAt) ||
 		!newPartialState.KYCStepsLastUpdatedAt.Equals(dbUser[0].KYCStepsLastUpdatedAt) ||
 		newPartialState.KYCStepBlocked != dbUser[0].KYCStepBlocked ||
