@@ -256,11 +256,12 @@ func (r *repository) FinalizeMiningBoostUpgrade(ctx context.Context, network Blo
 	if icePrice-burntAmount <= 0 {
 		return nil, nil
 	}
-	remainingPayment := icePrice - burntAmount
+	initiallyProposedToPayAmount := icePrice * (1 + (float64(r.cfg.MiningBoost.PriceDelta) / 100))
+	remainingPayment := initiallyProposedToPayAmount - burntAmount
 
 	return &PendingMiningBoostUpgrade{
 		ExpiresAt:      time.New(stdlibtime.Unix(0, expireAt.UnixNano())),
-		ICEPrice:       strconv.FormatFloat(remainingPayment*(1+(float64(r.cfg.MiningBoost.PriceDelta)/100)), 'f', miningBoostPricePrecision, 64),
+		ICEPrice:       strconv.FormatFloat(remainingPayment, 'f', miningBoostPricePrecision, 64),
 		PaymentAddress: r.cfg.MiningBoost.PaymentAddress,
 	}, nil
 }
