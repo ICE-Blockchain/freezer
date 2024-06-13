@@ -130,7 +130,10 @@ ALTER TABLE light.freezer_user_history
 
 ALTER TABLE light.freezer_user_history
     ADD COLUMN IF NOT EXISTS country String  DEFAULT '' AFTER kyc_steps_last_updated_at;
-  
+
+ALTER TABLE light.freezer_user_history
+    ADD COLUMN IF NOT EXISTS balance_last_updated_at DateTime64(9,'UTC') DEFAULT 0 AFTER for_tminus1_last_ethereum_coin_distribution_processed_at;
+
 CREATE TABLE IF NOT EXISTS dark.freezer_user_history
 (
       mining_session_solo_last_started_at DateTime64(9,'UTC')  DEFAULT 0,
@@ -259,7 +262,10 @@ ALTER TABLE dark.freezer_user_history
 
 ALTER TABLE dark.freezer_user_history
     ADD COLUMN IF NOT EXISTS country String  DEFAULT '' AFTER kyc_steps_last_updated_at;
-  
+
+ALTER TABLE dark.freezer_user_history
+    ADD COLUMN IF NOT EXISTS balance_last_updated_at DateTime64(9,'UTC') DEFAULT 0 AFTER for_tminus1_last_ethereum_coin_distribution_processed_at;
+
 CREATE TABLE IF NOT EXISTS freezer_user_history
 (
      mining_session_solo_last_started_at DateTime64(9,'UTC')  DEFAULT 0,
@@ -386,3 +392,6 @@ ALTER TABLE freezer_user_history
 
 ALTER TABLE freezer_user_history
     ADD COLUMN IF NOT EXISTS country String  DEFAULT '' AFTER kyc_steps_last_updated_at;
+
+ALTER TABLE freezer_user_history
+    ADD COLUMN IF NOT EXISTS balance_last_updated_at DateTime64(9,'UTC') DEFAULT 0 AFTER for_tminus1_last_ethereum_coin_distribution_processed_at;

@@ -53,6 +53,7 @@ type (
 		soloLastEthereumCoinDistributionProcessedAt            *proto.ColDateTime64
 		forT0LastEthereumCoinDistributionProcessedAt           *proto.ColDateTime64
 		forTMinus1LastEthereumCoinDistributionProcessedAt      *proto.ColDateTime64
+		balanceLastUpdatedAt                                   *proto.ColDateTime64
 		createdAt                                              *proto.ColDateTime
 		country                                                *proto.ColStr
 		profilePictureName                                     *proto.ColStr

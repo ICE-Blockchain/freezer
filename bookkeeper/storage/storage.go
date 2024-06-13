@@ -187,6 +187,11 @@ func (db *db) Insert(ctx context.Context, columns *Columns, input InsertMetadata
 		} else {
 			columns.forTMinus1LastEthereumCoinDistributionProcessedAt.Append(*usr.ForTMinus1LastEthereumCoinDistributionProcessedAt.Time)
 		}
+		if usr.BalanceLastUpdatedAt.IsNil() {
+			columns.balanceLastUpdatedAt.Append(stdlibtime.Time{})
+		} else {
+			columns.balanceLastUpdatedAt.Append(*usr.BalanceLastUpdatedAt.Time)
+		}
 		columns.createdAt.Append(now.Truncate(truncateDuration))
 		columns.country.Append(usr.Country)
 		columns.profilePictureName.Append(usr.ProfilePictureName)
@@ -290,6 +295,7 @@ func InsertDDL(rows int) (*Columns, proto.Input) {
 		soloLastEthereumCoinDistributionProcessedAt            = &proto.ColDateTime64{Data: make([]proto.DateTime64, 0, rows), Location: stdlibtime.UTC, Precision: proto.PrecisionMax, PrecisionSet: true}
 		forT0LastEthereumCoinDistributionProcessedAt           = &proto.ColDateTime64{Data: make([]proto.DateTime64, 0, rows), Location: stdlibtime.UTC, Precision: proto.PrecisionMax, PrecisionSet: true}
 		forTMinus1LastEthereumCoinDistributionProcessedAt      = &proto.ColDateTime64{Data: make([]proto.DateTime64, 0, rows), Location: stdlibtime.UTC, Precision: proto.PrecisionMax, PrecisionSet: true}
+		balanceLastUpdatedAt                                   = &proto.ColDateTime64{Data: make([]proto.DateTime64, 0, rows), Location: stdlibtime.UTC, Precision: proto.PrecisionMax, PrecisionSet: true}
 		createdAt                                              = &proto.ColDateTime{Data: make([]proto.DateTime, 0, rows), Location: stdlibtime.UTC}
 		country                                                = &proto.ColStr{Buf: make([]byte, 0, 3*rows), Pos: make([]proto.Position, 0, rows)}
 		profilePictureName                                     = &proto.ColStr{Buf: make([]byte, 0, 50*rows), Pos: make([]proto.Position, 0, rows)}
@@ -364,6 +370,7 @@ func InsertDDL(rows int) (*Columns, proto.Input) {
 		proto.InputColumn{Name: "solo_last_ethereum_coin_distribution_processed_at", Data: soloLastEthereumCoinDistributionProcessedAt},
 		proto.InputColumn{Name: "for_t0_last_ethereum_coin_distribution_processed_at", Data: forT0LastEthereumCoinDistributionProcessedAt},
 		proto.InputColumn{Name: "for_tminus1_last_ethereum_coin_distribution_processed_at", Data: forTMinus1LastEthereumCoinDistributionProcessedAt},
+		proto.InputColumn{Name: "balance_last_updated_at", Data: balanceLastUpdatedAt},
 		proto.InputColumn{Name: "created_at", Data: createdAt},
 		proto.InputColumn{Name: "country", Data: country},
 		proto.InputColumn{Name: "profile_picture_name", Data: profilePictureName},
@@ -438,38 +445,39 @@ func InsertDDL(rows int) (*Columns, proto.Input) {
 		soloLastEthereumCoinDistributionProcessedAt:       soloLastEthereumCoinDistributionProcessedAt,
 		forT0LastEthereumCoinDistributionProcessedAt:      forT0LastEthereumCoinDistributionProcessedAt,
 		forTMinus1LastEthereumCoinDistributionProcessedAt: forTMinus1LastEthereumCoinDistributionProcessedAt,
-		createdAt:                      createdAt,
-		country:                        country,
-		profilePictureName:             profilePictureName,
-		username:                       username,
-		miningBlockchainAccountAddress: miningBlockchainAccountAddress,
-		blockchainAccountAddress:       blockchainAccountAddress,
-		userID:                         userID,
-		id:                             &id,
-		idT0:                           &idT0,
-		idTminus1:                      &idTminus1,
-		balanceTotalStandard:           &balanceTotalStandard,
-		balanceTotalPreStaking:         &balanceTotalPreStaking,
-		balanceTotalMinted:             &balanceTotalMinted,
-		balanceTotalSlashed:            &balanceTotalSlashed,
-		balanceSoloPending:             &balanceSoloPending,
-		balanceT1Pending:               &balanceT1Pending,
-		balanceT2Pending:               &balanceT2Pending,
-		balanceSoloPendingApplied:      &balanceSoloPendingApplied,
-		balanceT1PendingApplied:        &balanceT1PendingApplied,
-		balanceT2PendingApplied:        &balanceT2PendingApplied,
-		balanceSolo:                    &balanceSolo,
-		balanceT0:                      &balanceT0,
-		balanceT1:                      &balanceT1,
-		balanceT2:                      &balanceT2,
-		balanceForT0:                   &balanceForT0,
-		balanceForTminus1:              &balanceForTminus1,
-		balanceSoloEthereum:            &balanceSoloEthereum,
-		balanceT0Ethereum:              &balanceT0Ethereum,
-		balanceT1Ethereum:              &balanceT1Ethereum,
-		balanceT2Ethereum:              &balanceT2Ethereum,
-		balanceForT0Ethereum:           &balanceForT0Ethereum,
-		balanceForTMinus1Ethereum:      &balanceForTMinus1Ethereum,
+		balanceLastUpdatedAt:                              balanceLastUpdatedAt,
+		createdAt:                                         createdAt,
+		country:                                           country,
+		profilePictureName:                                profilePictureName,
+		username:                                          username,
+		miningBlockchainAccountAddress:                    miningBlockchainAccountAddress,
+		blockchainAccountAddress:                          blockchainAccountAddress,
+		userID:                                            userID,
+		id:                                                &id,
+		idT0:                                              &idT0,
+		idTminus1:                                         &idTminus1,
+		balanceTotalStandard:                              &balanceTotalStandard,
+		balanceTotalPreStaking:                            &balanceTotalPreStaking,
+		balanceTotalMinted:                                &balanceTotalMinted,
+		balanceTotalSlashed:                               &balanceTotalSlashed,
+		balanceSoloPending:                                &balanceSoloPending,
+		balanceT1Pending:                                  &balanceT1Pending,
+		balanceT2Pending:                                  &balanceT2Pending,
+		balanceSoloPendingApplied:                         &balanceSoloPendingApplied,
+		balanceT1PendingApplied:                           &balanceT1PendingApplied,
+		balanceT2PendingApplied:                           &balanceT2PendingApplied,
+		balanceSolo:                                       &balanceSolo,
+		balanceT0:                                         &balanceT0,
+		balanceT1:                                         &balanceT1,
+		balanceT2:                                         &balanceT2,
+		balanceForT0:                                      &balanceForT0,
+		balanceForTminus1:                                 &balanceForTminus1,
+		balanceSoloEthereum:                               &balanceSoloEthereum,
+		balanceT0Ethereum:                                 &balanceT0Ethereum,
+		balanceT1Ethereum:                                 &balanceT1Ethereum,
+		balanceT2Ethereum:                                 &balanceT2Ethereum,
+		balanceForT0Ethereum:                              &balanceForT0Ethereum,
+		balanceForTMinus1Ethereum:                         &balanceForTMinus1Ethereum,
 		balanceSoloEthereumMainnetRewardPoolContribution:       &balanceSoloEthereumMainnetRewardPoolContribution,
 		balanceT0EthereumMainnetRewardPoolContribution:         &balanceT0EthereumMainnetRewardPoolContribution,
 		balanceT1EthereumMainnetRewardPoolContribution:         &balanceT1EthereumMainnetRewardPoolContribution,
@@ -574,8 +582,9 @@ func (db *db) SelectTotalCoins(ctx context.Context, createdAts []stdlibtime.Time
 		format := date.UTC().Format(stdlibtime.RFC3339)
 		createdAtArray = append(createdAtArray, format[0:len(format)-1])
 	}
+	sql := fmt.Sprintf(selectTotalCoinsSQL, tableName, strings.Join(createdAtArray, "','"), users.NoneKYCStep, strings.Join(createdAtArray, "'), ('"), createdAtArray[0])
 	if err := db.pools[atomic.AddUint64(&db.currentIndex, 1)%uint64(len(db.pools))].Do(ctx, ch.Query{
-		Body: fmt.Sprintf(selectTotalCoinsSQL, tableName, strings.Join(createdAtArray, "','"), users.NoneKYCStep),
+		Body: sql,
 		Result: append(make(proto.Results, 0, 4),
 			proto.ResultColumn{Name: "created_at", Data: &createdAt},
 			proto.ResultColumn{Name: "balance_total_standard", Data: &balanceTotalStandard},
