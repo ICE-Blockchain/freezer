@@ -420,8 +420,9 @@ type (
 			T1 uint32 `yaml:"t1"`
 			T2 uint32 `yaml:"t2"`
 		} `yaml:"referralBonusMiningRates"`
-		SlashingFloor float64 `yaml:"slashingFloor" mapstructure:"slashingFloor"`
-		Tenant        string  `yaml:"tenant"`
+		Tenant              string  `yaml:"tenant"`
+		DefaultReferralName string  `yaml:"defaultReferralName"`
+		SlashingFloor       float64 `yaml:"slashingFloor" mapstructure:"slashingFloor"`
 	}
 )
 

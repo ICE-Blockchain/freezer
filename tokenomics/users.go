@@ -242,7 +242,7 @@ func (s *usersTableSource) replaceUser(ctx context.Context, usr *users.User) err
 func (s *usersTableSource) updateReferredBy(ctx context.Context, id, oldIDT0, oldTMinus1 int64, userID, referredBy string, balanceForTMinus1 float64) error {
 	if referredBy == userID ||
 		referredBy == "" ||
-		referredBy == "bogus" ||
+		referredBy == s.cfg.DefaultReferralName ||
 		referredBy == "icenetwork" {
 		return nil
 	}

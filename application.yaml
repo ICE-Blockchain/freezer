@@ -72,6 +72,7 @@ mining-boost: &mining-boost
       - https://bsc-dataseed1.binance.org/
   paymentAddress: "0x0000000000000000000000000000000000000000"
 tokenomics: &tokenomics
+  defaultReferralName: bogus
   slashingFloor: 5
   adoption:
     startingBaseMiningRate: 16
