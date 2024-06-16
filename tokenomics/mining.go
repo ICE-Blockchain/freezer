@@ -326,7 +326,7 @@ func (r *repository) calculateMiningRateSummaries(
 		miningRates.Type = NegativeMiningRateType
 	}
 	miningRates.Base = &MiningRateSummary[string]{
-		Amount: fmt.Sprintf(floatToStringFormatter, baseMiningRate),
+		Amount: fmt.Sprintf(floatToStringFormatter, roundFloat64(baseMiningRate)),
 	}
 	if preStakingAllocation != 100 {
 		var localTotalBonus float64
