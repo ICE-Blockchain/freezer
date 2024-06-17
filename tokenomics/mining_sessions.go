@@ -72,7 +72,7 @@ func (r *repository) StartNewMiningSession( //nolint:funlen,gocognit // A lot of
 	if !old[0].MiningSessionSoloEndedAt.IsNil() &&
 		!old[0].MiningSessionSoloLastStartedAt.IsNil() &&
 		old[0].MiningSessionSoloEndedAt.After(*now.Time) &&
-		(now.Sub(*old[0].MiningSessionSoloLastStartedAt.Time)/r.cfg.MiningSessionDuration.Min)%2 == 0 {
+		now.Sub(*old[0].MiningSessionSoloLastStartedAt.Time) < r.cfg.MiningSessionDuration.Min {
 		return ErrDuplicate
 	}
 	if !old[0].MiningSessionSoloEndedAt.IsNil() &&
