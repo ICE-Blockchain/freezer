@@ -243,6 +243,7 @@ func (s *usersTableSource) updateReferredBy(ctx context.Context, id, oldIDT0, ol
 	if referredBy == userID ||
 		referredBy == "" ||
 		referredBy == s.cfg.DefaultReferralName ||
+		referredBy == "bogus" ||
 		referredBy == "icenetwork" {
 		return nil
 	}
