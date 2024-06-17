@@ -116,8 +116,8 @@ func (r *repository) StartNewMiningSession( //nolint:funlen,gocognit // A lot of
 		Extension:                     extension,
 		MiningStreak:                  r.calculateMiningStreak(now, startedAt, newMS.MiningSessionSoloEndedAt),
 		UserID:                        &userID,
-		ResettableStartingAt:          time.New(startedAt.Add(r.cfg.MiningSessionDuration.Min)),
-		WarnAboutExpirationStartingAt: time.New(startedAt.Add(r.cfg.maxMiningSessionDuration(old[0].MiningBoostLevelIndexField) - r.cfg.MiningSessionDuration.Max).Add(r.cfg.MiningSessionDuration.WarnAboutExpirationAfter)),
+		ResettableStartingAt:          time.New(newMS.MiningSessionSoloLastStartedAt.Add(r.cfg.MiningSessionDuration.Min)),
+		WarnAboutExpirationStartingAt: time.New(newMS.MiningSessionSoloLastStartedAt.Add(r.cfg.maxMiningSessionDuration(old[0].MiningBoostLevelIndexField) - r.cfg.MiningSessionDuration.Max).Add(r.cfg.MiningSessionDuration.WarnAboutExpirationAfter)),
 	}
 	if err = r.sendMiningSessionMessage(ctx, sess); err != nil {
 		return errors.Wrapf(err, "failed to sendMiningSessionMessage:%#v", sess)
