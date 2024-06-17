@@ -68,7 +68,8 @@ func mine(now *time.Time, usr *user, t0Ref, tMinus1Ref *referral) (updatedUser *
 			updatedUser.BalanceTotalSlashed = 0
 			updatedUser.BalanceTotalMinted = 0
 		}
-		if updatedUser.MiningSessionSoloEndedAt.After(*now.Time) && (updatedUser.isAbsoluteZero() || updatedUser.reachedSlashingFloor()) {
+		userWasInSlashingAndReachedFloor := (updatedUser.reachedSlashingFloor() && usr.SlashingRateSolo > 0)
+		if updatedUser.MiningSessionSoloEndedAt.After(*now.Time) && (updatedUser.isAbsoluteZero() || userWasInSlashingAndReachedFloor) {
 			updatedUser.BalanceLastUpdatedAt = updatedUser.MiningSessionSoloStartedAt
 		}
 	}
