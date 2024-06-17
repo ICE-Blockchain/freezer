@@ -69,10 +69,11 @@ func (r *repository) StartNewMiningSession( //nolint:funlen,gocognit // A lot of
 
 		return errors.Wrapf(err, "failed to get miningSummary for id:%v", id)
 	}
+	maxMiningSessionDuration := r.cfg.maxMiningSessionDuration(old[0].MiningBoostLevelIndexField)
 	if !old[0].MiningSessionSoloEndedAt.IsNil() &&
 		!old[0].MiningSessionSoloLastStartedAt.IsNil() &&
 		old[0].MiningSessionSoloEndedAt.After(*now.Time) &&
-		now.Sub(*old[0].MiningSessionSoloLastStartedAt.Time) < r.cfg.MiningSessionDuration.Min {
+		(now.Sub(*old[0].MiningSessionSoloLastStartedAt.Time)/r.cfg.MiningSessionDuration.Min)%(maxMiningSessionDuration/r.cfg.MiningSessionDuration.Min) == 0 {
 		return ErrDuplicate
 	}
 	if !old[0].MiningSessionSoloEndedAt.IsNil() &&
