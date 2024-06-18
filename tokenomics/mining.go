@@ -226,7 +226,7 @@ func (r *repository) GetMiningSummary(ctx context.Context, userID string) (*Mini
 
 	return &MiningSummary{
 		MiningStreak:                r.calculateMiningStreak(now, ms[0].MiningSessionSoloStartedAt, ms[0].MiningSessionSoloEndedAt),
-		MiningSession:               r.calculateMiningSession(now, ms[0].MiningSessionSoloLastStartedAt, ms[0].MiningSessionSoloEndedAt, maxMiningSessionDuration, r.cfg.MiningSessionDuration.Max),
+		MiningSession:               r.calculateMiningSession(now, ms[0].MiningSessionSoloLastStartedAt, ms[0].MiningSessionSoloEndedAt, maxMiningSessionDuration),
 		RemainingFreeMiningSessions: r.calculateRemainingFreeMiningSessions(now, ms[0].MiningSessionSoloLastStartedAt, ms[0].MiningSessionSoloEndedAt, maxMiningSessionDuration),
 		MiningRates:                 r.calculateMiningRateSummaries(t0, extraBonus, ms[0].PreStakingAllocation, ms[0].PreStakingBonus, activeT1Referrals, t2, r.cfg.BaseMiningRate(now, ms[0].CreatedAt), negativeMiningRate, ms[0].BalanceTotalStandard+ms[0].BalanceTotalPreStaking, now, ms[0].MiningSessionSoloEndedAt, slashingIsOff), //nolint:lll // .
 		ExtraBonusSummary:           ExtraBonusSummary{AvailableExtraBonus: extraBonus},
@@ -252,10 +252,10 @@ func (r *repository) isT0Online(ctx context.Context, idT0 int64, now *time.Time)
 	return 0, errors.Wrapf(err, "failed to get MiningSessionSoloEndedAtField for idT0:%v", idT0)
 }
 
-func (r *repository) calculateMiningSession(now, start, end *time.Time, maxMiningSessionDuration, maxFreeMiningSessionDuration stdlibtime.Duration) (ms *MiningSession) {
+func (r *repository) calculateMiningSession(now, start, end *time.Time, maxMiningSessionDuration stdlibtime.Duration) (ms *MiningSession) {
 	if ms = CalculateMiningSession(now, start, end, maxMiningSessionDuration); ms != nil {
 		if ms.Free != nil && *ms.Free {
-			ms.EndedAt = time.New(ms.StartedAt.Add(maxFreeMiningSessionDuration))
+			ms.EndedAt = time.New(ms.StartedAt.Add(r.cfg.MiningSessionDuration.Max))
 		}
 		ms.ResettableStartingAt = time.New(ms.StartedAt.Add(r.cfg.MiningSessionDuration.Min))
 		ms.WarnAboutExpirationStartingAt = time.New(ms.StartedAt.Add(maxMiningSessionDuration - r.cfg.MiningSessionDuration.Max).Add(r.cfg.MiningSessionDuration.WarnAboutExpirationAfter))
@@ -490,7 +490,7 @@ func (r *repository) calculateRemainingFreeMiningSessions(now, start, end *time.
 	}
 
 	if maxMiningSession > r.cfg.MiningSessionDuration.Max {
-		latestMiningSession := r.calculateMiningSession(now, start, end, maxMiningSession, r.cfg.MiningSessionDuration.Max)
+		latestMiningSession := r.calculateMiningSession(now, start, end, maxMiningSession)
 
 		if latestMiningSession == nil || end.Before(*latestMiningSession.EndedAt.Time) {
 			return 0
