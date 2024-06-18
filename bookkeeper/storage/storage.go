@@ -14,6 +14,7 @@ import (
 	"github.com/ClickHouse/ch-go/chpool"
 	"github.com/ClickHouse/ch-go/proto"
 	"github.com/hashicorp/go-multierror"
+	"github.com/pkg/errors"
 	"go.uber.org/zap"
 
 	"github.com/ice-blockchain/eskimo/users"
@@ -642,14 +643,25 @@ func (db *db) SelectTotalCoins(ctx context.Context, createdAts []stdlibtime.Time
 }
 
 func (db *db) DeleteUserInfo(ctx context.Context, id int64) error {
-	return db.pools[atomic.AddUint64(&db.currentIndex, 1)%uint64(len(db.pools))].Do(ctx, ch.Query{
-		Body: fmt.Sprintf(`DELETE FROM %[1]v WHERE id = %[2]v`, tableName, id),
+	errDark := db.pools[atomic.AddUint64(&db.currentIndex, 1)%uint64(len(db.pools))].Do(ctx, ch.Query{
+		Body: fmt.Sprintf(`DELETE FROM dark.%[1]v WHERE id = %[2]v`, tableName, id),
 		OnResult: func(_ context.Context, block proto.Block) error {
 			return nil
 		},
 		Secret:      "",
 		InitialUser: "",
 	})
+	if errDark != nil {
+		return errors.Wrapf(errDark, "failed to delete user %v from clickhouse dark", id)
+	}
+	return errors.Wrapf(db.pools[atomic.AddUint64(&db.currentIndex, 1)%uint64(len(db.pools))].Do(ctx, ch.Query{
+		Body: fmt.Sprintf(`DELETE FROM light.%[1]v WHERE id = %[2]v`, tableName, id),
+		OnResult: func(_ context.Context, block proto.Block) error {
+			return nil
+		},
+		Secret:      "",
+		InitialUser: "",
+	}), "failed to delete user %v from clickhouse light", id)
 }
 
 func (t *TotalCoins) Key() string {
