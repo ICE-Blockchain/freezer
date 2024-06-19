@@ -167,6 +167,7 @@ func (m *miner) mine(ctx context.Context, workerNumber int64) {
 		t0Referrals, tMinus1Referrals                                        = make(map[int64]*referral, batchSize), make(map[int64]*referral, batchSize)
 		t1ReferralsToIncrementActiveValue, t2ReferralsToIncrementActiveValue = make(map[int64]int32, batchSize), make(map[int64]int32, batchSize)
 		t1ReferralsThatStoppedMining, t2ReferralsThatStoppedMining           = make(map[int64]uint32, batchSize), make(map[int64]uint32, batchSize)
+		activeReferralsOfT0, activeReferralsOfT0RankingKeys                  = make(map[int64]map[int64]struct{}, batchSize), make(map[string]int64, batchSize)
 		balanceT1EthereumIncr, balanceT2EthereumIncr                         = make(map[int64]float64, batchSize), make(map[int64]float64, batchSize)
 		pendingBalancesForTMinus1, pendingBalancesForT0                      = make(map[int64]float64, batchSize), make(map[int64]float64, batchSize)
 		referralsThatStoppedMining                                           = make([]*referralThatStoppedMining, 0, batchSize)
@@ -245,6 +246,12 @@ func (m *miner) mine(ctx context.Context, workerNumber int64) {
 		}
 		for k := range t2ReferralsToIncrementActiveValue {
 			delete(t2ReferralsToIncrementActiveValue, k)
+		}
+		for k := range activeReferralsOfT0RankingKeys {
+			delete(activeReferralsOfT0RankingKeys, k)
+		}
+		for k := range activeReferralsOfT0 {
+			delete(activeReferralsOfT0, k)
 		}
 		for k := range balanceT1EthereumIncr {
 			delete(balanceT1EthereumIncr, k)
@@ -327,10 +334,6 @@ func (m *miner) mine(ctx context.Context, workerNumber int64) {
 			go m.telemetry.collectElapsed(3, *before.Time)
 		}
 
-		/******************************************************************************************************************************************************
-			3. Mining for the users.
-		******************************************************************************************************************************************************/
-
 		for _, ref := range referralResults {
 			if !isAdvancedTeamDisabled(ref.LatestDevice) {
 				if _, found := tMinus1Referrals[ref.ID]; found {
@@ -341,6 +344,65 @@ func (m *miner) mine(ctx context.Context, workerNumber int64) {
 				t0Referrals[ref.ID] = ref
 			}
 		}
+
+		/******************************************************************************************************************************************************
+			3. Fetch ranking of active T1 referrals (N most recent active), to update ForT0Balance for them
+		******************************************************************************************************************************************************/
+		for idT0 := range t0Referrals {
+			t0Ref := t0Referrals[idT0]
+			if t0Ref.MiningBoostLevelIndex != nil {
+				activeReferralsOfT0RankingKeys[fmt.Sprintf("%v_active_t1_referrals_ranking", idT0)] = idT0
+			}
+		}
+		if len(activeReferralsOfT0RankingKeys) > 0 {
+			before = time.Now()
+			reqCtx, reqCancel = context.WithTimeout(context.Background(), requestDeadline)
+			if zRangeResult, zErr := m.db.Pipelined(reqCtx, func(pipeliner redis.Pipeliner) error {
+				for key, t0Id := range activeReferralsOfT0RankingKeys {
+					t0Ref := t0Referrals[t0Id]
+					rangeBy := &redis.ZRangeBy{Min: "0", Max: "+inf", Offset: int64(0), Count: int64((*cfg.miningBoostLevels.Load())[int(*t0Ref.MiningBoostLevelIndex)].MaxT1Referrals)}
+					if _, err := pipeliner.ZRevRangeByScore(ctx, key, rangeBy).Result(); err != nil {
+						return err
+					}
+				}
+				return nil
+			}); zErr != nil {
+				log.Error(errors.Wrapf(zErr, "[miner] failed to get active T1 referrals ranking for batchNumber:%v,workerNumber:%v", batchNumber, workerNumber))
+				reqCancel()
+				resetVars(false)
+
+				continue
+			} else {
+				reqCancel()
+				for _, cmdRes := range zRangeResult {
+					if cmdRes.Err() != nil {
+						errs = append(errs, errors.Wrapf(cmdRes.Err(), "failed to fetch active referrals ranking %#v for batchNumber:%v,workerNumber:%v", cmdRes.Args(), batchNumber, workerNumber))
+						continue
+					}
+					sliceRes := cmdRes.(*redis.StringSliceCmd)
+					key := sliceRes.Args()[1].(string)
+					ids := make(map[int64]struct{}, 0)
+					for _, v := range sliceRes.Val() {
+						id, _ := strconv.Atoi(v)
+						ids[int64(id)] = struct{}{}
+					}
+					activeReferralsOfT0[activeReferralsOfT0RankingKeys[key]] = ids
+				}
+				if cmdErr := multierror.Append(nil, errs...).ErrorOrNil(); cmdErr != nil {
+					log.Error(errors.Wrapf(cmdErr, "[miner] failed to get active T1 referrals ranking for batchNumber:%v,workerNumber:%v", batchNumber, workerNumber))
+					reqCancel()
+					resetVars(false)
+
+					continue
+				}
+			}
+			go m.telemetry.collectElapsed(4, *before.Time)
+		}
+
+		/******************************************************************************************************************************************************
+			4. Mining for the users.
+		******************************************************************************************************************************************************/
+
 		shouldSynchronizeBalance := shouldSynchronizeBalanceFunc(uint64(batchNumber))
 		for _, usr := range userResults {
 			if usr.UserID == "" {
@@ -362,7 +424,13 @@ func (m *miner) mine(ctx context.Context, workerNumber int64) {
 			if isAdvancedTeamDisabled(usr.LatestDevice) {
 				usr.ActiveT2Referrals = 0
 			}
-			updatedUser, shouldGenerateHistory, IDT0Changed, pendingAmountForTMinus1, pendingAmountForT0 := mine(now, usr, t0Ref, tMinus1Ref)
+			userFittingToT0RefLimit := false
+			if t0Ref != nil {
+				if t0ActiveRefs, t0HasActiveRefs := activeReferralsOfT0[t0Ref.ID]; t0HasActiveRefs {
+					_, userFittingToT0RefLimit = t0ActiveRefs[usr.ID]
+				}
+			}
+			updatedUser, shouldGenerateHistory, IDT0Changed, pendingAmountForTMinus1, pendingAmountForT0 := mine(now, usr, t0Ref, tMinus1Ref, userFittingToT0RefLimit)
 			if shouldGenerateHistory {
 				syncQuizUserIDs = append(syncQuizUserIDs, usr.UserID)
 				userHistoryKeys = append(userHistoryKeys, usr.Key())
@@ -433,11 +501,14 @@ func (m *miner) mine(ctx context.Context, workerNumber int64) {
 		}
 
 		/******************************************************************************************************************************************************
-			4. Sending messages to the broker.
+			5. Sending messages to the broker.
 		******************************************************************************************************************************************************/
 
 		before = time.Now()
 		reqCtx, reqCancel = context.WithTimeout(context.Background(), requestDeadline)
+		if len(errs) != 0 {
+			errs = errs[:0]
+		}
 		for _, message := range msgs {
 			m.mb.SendMessage(reqCtx, message, msgResponder)
 		}
@@ -453,11 +524,11 @@ func (m *miner) mine(ctx context.Context, workerNumber int64) {
 		}
 		reqCancel()
 		if len(msgs) > 0 {
-			go m.telemetry.collectElapsed(4, *before.Time)
+			go m.telemetry.collectElapsed(5, *before.Time)
 		}
 
 		/******************************************************************************************************************************************************
-			5. Fetching all relevant fields that will be added to the history/bookkeeping.
+			6. Fetching all relevant fields that will be added to the history/bookkeeping.
 		******************************************************************************************************************************************************/
 
 		before = time.Now()
@@ -472,11 +543,11 @@ func (m *miner) mine(ctx context.Context, workerNumber int64) {
 		reqCancel()
 
 		if len(userHistoryKeys) > 0 {
-			go m.telemetry.collectElapsed(5, *before.Time)
+			go m.telemetry.collectElapsed(6, *before.Time)
 		}
 
 		/******************************************************************************************************************************************************
-			6. Syncing quiz state
+			7. Syncing quiz state
 		******************************************************************************************************************************************************/
 		before = time.Now()
 		if false && (len(syncQuizUserIDs) > 0 && len(histories) > 0) {
@@ -498,12 +569,12 @@ func (m *miner) mine(ctx context.Context, workerNumber int64) {
 						histories[i].KYCQuizCompleted = quizSync.KYCQuizCompleted
 					}
 				}
-				go m.telemetry.collectElapsed(6, *before.Time)
+				go m.telemetry.collectElapsed(7, *before.Time)
 			}
 		}
 
 		/******************************************************************************************************************************************************
-			7. Inserting history/bookkeeping data.
+			8. Inserting history/bookkeeping data.
 		******************************************************************************************************************************************************/
 
 		before = time.Now()
@@ -517,11 +588,11 @@ func (m *miner) mine(ctx context.Context, workerNumber int64) {
 		}
 		reqCancel()
 		if len(histories) > 0 {
-			go m.telemetry.collectElapsed(7, *before.Time)
+			go m.telemetry.collectElapsed(8, *before.Time)
 		}
 
 		/******************************************************************************************************************************************************
-			8. Processing Ethereum Coin Distributions for eligible users.
+			9. Processing Ethereum Coin Distributions for eligible users.
 		******************************************************************************************************************************************************/
 
 		before = time.Now()
@@ -535,11 +606,11 @@ func (m *miner) mine(ctx context.Context, workerNumber int64) {
 		}
 		reqCancel()
 		if len(coinDistributions) > 0 {
-			go m.telemetry.collectElapsed(8, *before.Time)
+			go m.telemetry.collectElapsed(9, *before.Time)
 		}
 
 		/******************************************************************************************************************************************************
-			9. Persisting the mining progress for the users.
+			10. Persisting the mining progress for the users.
 		******************************************************************************************************************************************************/
 
 		for _, usr := range referralsThatStoppedMining {
@@ -667,7 +738,7 @@ func (m *miner) mine(ctx context.Context, workerNumber int64) {
 			}
 		}
 		if transactional || len(updatedUsers) > 0 {
-			go m.telemetry.collectElapsed(9, *before.Time)
+			go m.telemetry.collectElapsed(10, *before.Time)
 		}
 
 		batchNumber++

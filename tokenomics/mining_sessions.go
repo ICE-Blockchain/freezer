@@ -294,7 +294,60 @@ func (s *miningSessionsTableSource) Process(ctx context.Context, msg *messagebro
 	return multierror.Append( //nolint:wrapcheck // Not needed.
 		errors.Wrapf(s.incrementTotalActiveUsers(ctx, ms), "failed to incrementTotalActiveUsers for %#v", ms),
 		errors.Wrapf(s.incrementActiveReferralCountForT0AndTMinus1(ctx, ms), "failed to incrementActiveReferralCountForT0AndTMinus1 for %#v", ms),
+		errors.Wrapf(s.rankActiveT1Referrals(ctx, ms), "failed to rank active T1 referrals %#v", ms),
 	).ErrorOrNil()
+}
+
+//nolint:funlen //.
+func (s *miningSessionsTableSource) rankActiveT1Referrals(ctx context.Context, ms *MiningSession) (err error) {
+	if ctx.Err() != nil || !ms.LastNaturalMiningStartedAt.Equal(*ms.StartedAt.Time) {
+		return errors.Wrap(ctx.Err(), "unexpected deadline")
+	}
+	duplGuardKey := ms.duplGuardKey(s.repository, "rank_active_t1_guard")
+	if set, dErr := s.db.SetNX(ctx, duplGuardKey, "", s.cfg.MiningSessionDuration.Min).Result(); dErr != nil || !set {
+		if dErr == nil {
+			dErr = ErrDuplicate
+		}
+
+		return errors.Wrapf(dErr, "SetNX failed for rank_active_t1_guard, miningSession: %#v", ms)
+	}
+	defer func() {
+		if err != nil {
+			undoCtx, cancelUndo := context.WithTimeout(context.Background(), requestDeadline)
+			defer cancelUndo()
+			err = multierror.Append( //nolint:wrapcheck // .
+				err,
+				errors.Wrapf(s.db.Del(undoCtx, duplGuardKey).Err(), "failed to del rank_active_t1_guard key"),
+			).ErrorOrNil()
+		}
+	}()
+	id, err := GetOrInitInternalID(ctx, s.db, *ms.UserID)
+	if err != nil {
+		return errors.Wrapf(err, "failed to getOrInitInternalID for userID:%v", *ms.UserID)
+	}
+	referee, err := storage.Get[struct {
+		model.UserIDField
+		model.DeserializedUsersKey
+		model.MiningSessionSoloEndedAtField
+		model.IDT0Field
+	}](ctx, s.db, model.SerializedUsersKey(id))
+	if err != nil || len(referee) == 0 || (referee[0].IDT0 == 0) {
+		return errors.Wrapf(err, "failed to get referees for id:%v, userID:%v", id, *ms.UserID)
+	}
+	if referee[0].IDT0 < 0 {
+		referee[0].IDT0 *= -1
+	}
+	if err != nil || len(referee) == 0 || (referee[0].IDT0 == 0) {
+		return errors.Wrapf(err, "failed to get referees for id:%v, userID:%v", id, *ms.UserID)
+	}
+	rankKey := fmt.Sprintf("%v_active_t1_referrals_ranking", referee[0].IDT0)
+	zRank := redis.Z{
+		Score:  float64(referee[0].MiningSessionSoloEndedAt.UnixNano()),
+		Member: id,
+	}
+	zErr := s.db.ZAdd(ctx, rankKey, zRank)
+
+	return errors.Wrapf(zErr.Err(), "failed to ZAdd activeT1Refs for id:%v, userID:%v, ref:%#v", id, *ms.UserID, referee[0])
 }
 
 //nolint:funlen,revive,gocognit // .

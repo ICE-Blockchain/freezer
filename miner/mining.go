@@ -9,7 +9,7 @@ import (
 	"github.com/ice-blockchain/wintr/time"
 )
 
-func mine(now *time.Time, usr *user, t0Ref, tMinus1Ref *referral) (updatedUser *user, shouldGenerateHistory, IDT0Changed bool, pendingAmountForTMinus1, pendingAmountForT0 float64) {
+func mine(now *time.Time, usr *user, t0Ref, tMinus1Ref *referral, userFittingToT0RefLimit bool) (updatedUser *user, shouldGenerateHistory, IDT0Changed bool, pendingAmountForTMinus1, pendingAmountForT0 float64) {
 	if usr == nil || usr.MiningSessionSoloStartedAt.IsNil() || usr.MiningSessionSoloEndedAt.IsNil() {
 		return nil, false, false, 0, 0
 	}
@@ -119,7 +119,9 @@ func mine(now *time.Time, usr *user, t0Ref, tMinus1Ref *referral) (updatedUser *
 		}
 		if t0Ref != nil && !t0Ref.MiningSessionSoloEndedAt.IsNil() && t0Ref.MiningSessionSoloEndedAt.After(*now.Time) {
 			rate := 25 * baseMiningRate * elapsedTimeFraction / 100
-			updatedUser.BalanceForT0 += rate
+			if userFittingToT0RefLimit {
+				updatedUser.BalanceForT0 += rate
+			}
 			updatedUser.BalanceT0 += rate
 			mintedAmount += rate
 
