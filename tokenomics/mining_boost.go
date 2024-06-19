@@ -321,7 +321,7 @@ func (r *repository) getSenderAndBurntAmountForMiningBoostUpgrade(ctx context.Co
 		}
 
 		if vLog.Address != ethcommon.HexToAddress(r.cfg.MiningBoost.ContractAddresses[network]) {
-			return "", 0, nil
+			continue
 		}
 
 		var transferEvent struct{ Value *big.Int }
