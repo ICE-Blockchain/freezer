@@ -4,7 +4,6 @@ package tokenomics
 
 import (
 	"context"
-	"crypto/tls"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -30,7 +29,6 @@ func init() { //nolint:gochecknoinits // It's the only way to tweak the client.
 	req.DefaultClient().SetJsonMarshal(json.Marshal)
 	req.DefaultClient().SetJsonUnmarshal(json.Unmarshal)
 	req.DefaultClient().GetClient().Timeout = requestDeadline
-	req.DefaultClient().SetTLSClientConfig(&tls.Config{InsecureSkipVerify: true})
 }
 
 func (r *repository) startKYCConfigJSONSyncer(ctx context.Context) {
@@ -216,7 +214,6 @@ func (r *repository) isKYCEnabled(ctx context.Context, latestDevice string, kycS
 	case users.NoneKYCStep:
 		return true
 	case users.FacialRecognitionKYCStep, users.LivenessDetectionKYCStep:
-		return false
 		if isWeb && !kycConfig.WebFaceAuth.Enabled {
 			return false
 		}
@@ -228,7 +225,6 @@ func (r *repository) isKYCEnabled(ctx context.Context, latestDevice string, kycS
 		}
 		return true
 	case users.Social1KYCStep:
-		return true
 		if isWeb && !kycConfig.Social1KYC.EnabledWeb {
 			return false
 		}
