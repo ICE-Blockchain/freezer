@@ -216,6 +216,14 @@ type (
 	RankingSummary struct {
 		GlobalRank uint64 `json:"globalRank" example:"12333"`
 	}
+	IceStats struct {
+		CirculatingSupply     float64 `json:"circulatingSupply"`
+		TotalSupply           float64 `json:"totalSupply"`
+		Price                 float64 `json:"price"`
+		MarketCap             float64 `json:"marketCap"`
+		TradingVolume24       float64 `json:"24hTradingVolume"`
+		FullyDilutedMarketCap float64 `json:"fullyDilutedMarketCap"`
+	}
 	ReadRepository interface {
 		GetMiningBoostSummary(ctx context.Context, userID string) (*MiningBoostSummary, error)
 		GetBalanceSummary(ctx context.Context, userID string) (*BalanceSummary, error)
@@ -305,7 +313,6 @@ type (
 		dwh                               dwh.Client
 		mb                                messagebroker.Client
 		pictureClient                     picture.Client
-		detailedMetricsRepo               detailedCoinMetrics.Repository
 	}
 
 	processor struct {

@@ -10,19 +10,9 @@ import (
 	"github.com/hashicorp/go-multierror"
 	"github.com/stretchr/testify/require"
 
-	detailedCoinMetrics "github.com/ice-blockchain/freezer/tokenomics/detailed_coin_metrics"
 	appCfg "github.com/ice-blockchain/wintr/config"
 	"github.com/ice-blockchain/wintr/connectors/storage/v3"
 )
-
-type mockedDetailedCoinMetrics struct{}
-
-func (*mockedDetailedCoinMetrics) ReadDetails(context.Context) (*detailedCoinMetrics.Details, error) {
-	return &detailedCoinMetrics.Details{
-		CurrentPrice: 1.42,
-		Volume24h:    42.42,
-	}, nil
-}
 
 func helperCreateRepoWithRedisOnly(t *testing.T) *repository {
 	t.Helper()
@@ -42,8 +32,7 @@ func helperCreateRepoWithRedisOnly(t *testing.T) *repository {
 		shutdown: func() error {
 			return multierror.Append(db.Close()).ErrorOrNil()
 		},
-		db:                  db,
-		detailedMetricsRepo: new(mockedDetailedCoinMetrics),
+		db: db,
 	}
 
 	return repo
@@ -87,8 +76,8 @@ func TestGetCoinStatsBlockchainDetails(t *testing.T) {
 		data, err := repo.loadCachedBlockchainDetails(context.TODO())
 		require.NoError(t, err)
 		require.NotNil(t, data)
-		require.Equal(t, 1.42, data.CurrentPrice)
-		require.Equal(t, 42.42, data.Volume24h)
+		require.Greater(t, data.CurrentPrice, 0.0)
+		require.Greater(t, data.Volume24h, 0.0)
 		require.NotNil(t, data.Timestamp)
 	})
 

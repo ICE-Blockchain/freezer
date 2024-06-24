@@ -18,7 +18,6 @@ import (
 
 	dwh "github.com/ice-blockchain/freezer/bookkeeper/storage"
 	extrabonusnotifier "github.com/ice-blockchain/freezer/extra-bonus-notifier"
-	detailedCoinMetrics "github.com/ice-blockchain/freezer/tokenomics/detailed_coin_metrics"
 	appCfg "github.com/ice-blockchain/wintr/config"
 	messagebroker "github.com/ice-blockchain/wintr/connectors/message_broker"
 	storagev2 "github.com/ice-blockchain/wintr/connectors/storage/v2"
@@ -41,10 +40,9 @@ func New(ctx context.Context, _ context.CancelFunc) Repository {
 		shutdown: func() error {
 			return multierror.Append(db.Close(), dwhClient.Close()).ErrorOrNil()
 		},
-		db:                  db,
-		dwh:                 dwhClient,
-		pictureClient:       picture.New(applicationYamlKey),
-		detailedMetricsRepo: detailedCoinMetrics.New(),
+		db:            db,
+		dwh:           dwhClient,
+		pictureClient: picture.New(applicationYamlKey),
 	}
 	go repo.startICEPriceSyncer(ctx)
 	go repo.startDisableAdvancedTeamCfgSyncer(ctx)
@@ -64,13 +62,12 @@ func StartProcessor(ctx context.Context, cancel context.CancelFunc) Processor {
 	appCfg.MustLoadFromKey(applicationYamlKey, &cfg)
 	dwhClient := dwh.MustConnect(ctx, applicationYamlKey)
 	prc := &processor{repository: &repository{
-		cfg:                 &cfg,
-		db:                  storage.MustConnect(context.Background(), applicationYamlKey),
-		globalDB:            storagev2.MustConnect(context.Background(), globalDDL, applicationYamlKey),
-		mb:                  messagebroker.MustConnect(context.Background(), applicationYamlKey),
-		dwh:                 dwhClient,
-		pictureClient:       picture.New(applicationYamlKey),
-		detailedMetricsRepo: detailedCoinMetrics.New(),
+		cfg:           &cfg,
+		db:            storage.MustConnect(context.Background(), applicationYamlKey),
+		globalDB:      storagev2.MustConnect(context.Background(), globalDDL, applicationYamlKey),
+		mb:            messagebroker.MustConnect(context.Background(), applicationYamlKey),
+		dwh:           dwhClient,
+		pictureClient: picture.New(applicationYamlKey),
 	}}
 	//nolint:contextcheck // It's intended. Cuz we want to close everything gracefully.
 	mbConsumer := messagebroker.MustConnectAndStartConsuming(context.Background(), cancel, applicationYamlKey,

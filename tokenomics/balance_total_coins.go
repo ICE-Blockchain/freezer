@@ -19,6 +19,7 @@ import (
 	"github.com/redis/go-redis/v9"
 
 	dwh "github.com/ice-blockchain/freezer/bookkeeper/storage"
+	"github.com/ice-blockchain/freezer/tokenomics/detailed_coin_metrics"
 	"github.com/ice-blockchain/wintr/connectors/storage/v3"
 	"github.com/ice-blockchain/wintr/log"
 	"github.com/ice-blockchain/wintr/time"
@@ -148,14 +149,17 @@ func (r *repository) updateCachedBlockchainDetails(ctx context.Context) error {
 		return nil
 	}
 
-	detailedCoinMetrics, err := r.detailedMetricsRepo.ReadDetails(ctx)
+	stats, err := FetchICEPrice(ctx)
 	if err != nil {
-		return errors.Wrap(err, "failed to read detailedCoinMetrics")
+		return errors.Wrap(err, "failed to read ice stats")
 	}
 
 	err = storage.Set(ctx, r.db, &BlockchainDetails{
 		Timestamp: now,
-		Details:   *detailedCoinMetrics,
+		Details: detailed_coin_metrics.Details{
+			CurrentPrice: stats.Price,
+			Volume24h:    stats.TradingVolume24,
+		},
 	})
 
 	return errors.Wrap(err, "failed to update totalCoinStatsDetails")

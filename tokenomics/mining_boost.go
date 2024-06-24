@@ -397,17 +397,17 @@ func (r *repository) startICEPriceSyncer(ctx context.Context) {
 }
 
 func (r *repository) syncICEPrice(ctx context.Context) error {
-	price, err := FetchICEPrice(ctx)
+	stats, err := FetchICEPrice(ctx)
 	if err != nil {
 		return errors.Wrap(err, "failed to fetchICEPrice")
 	}
-	r.cfg.MiningBoost.icePrice.Store(&price)
+	r.cfg.MiningBoost.icePrice.Store(&stats.Price)
 	r.cfg.MiningBoost.levels.Store(r.buildMiningBoostLevels())
 
 	return nil
 }
 
-func FetchICEPrice(ctx context.Context) (float64, error) {
+func FetchICEPrice(ctx context.Context) (*IceStats, error) {
 	if resp, err := req.
 		SetContext(ctx).
 		SetRetryCount(25).
@@ -430,17 +430,15 @@ func FetchICEPrice(ctx context.Context) (float64, error) {
 		SetHeader("Pragma", "no-cache").
 		SetHeader("Expires", "0").
 		Get("https://data.ice.io/stats"); err != nil {
-		return 0, errors.Wrap(err, "failed to fetch https://data.ice.io/stats")
+		return nil, errors.Wrap(err, "failed to fetch https://data.ice.io/stats")
 	} else if data, err2 := resp.ToBytes(); err2 != nil {
-		return 0, errors.Wrap(err2, "failed to read body of https://data.ice.io/stats")
+		return nil, errors.Wrap(err2, "failed to read body of https://data.ice.io/stats")
 	} else {
-		var stats struct {
-			Price float64 `json:"price"`
-		}
+		var stats IceStats
 		if err3 := json.Unmarshal(data, &stats); err3 != nil {
-			return 0, errors.Wrapf(err3, "failed to unmarshal into %#v, data: `%v`", &stats, string(data))
+			return nil, errors.Wrapf(err3, "failed to unmarshal into %#v, data: `%v`", &stats, string(data))
 		} else {
-			return stats.Price, nil
+			return &stats, nil
 		}
 	}
 }
