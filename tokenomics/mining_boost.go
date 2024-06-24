@@ -166,7 +166,8 @@ func (r *repository) FinalizeMiningBoostUpgrade(ctx context.Context, network Blo
 		return nil, errors.Errorf("current mining boost level `%v` is greater or equal than provided one `%v`", *res[0].MiningBoostLevelIndex, miningBoostLevelIndex)
 	}
 	txHash = strings.ToLower(txHash)
-	senderAddress, burntAmount, err := r.getSenderAndBurntAmountForMiningBoostUpgrade(ctx, network, generateMiningBoostPaymentAddress(id), txHash)
+	paymentAddress := generateMiningBoostPaymentAddress(id)
+	senderAddress, burntAmount, isBatchTransaction, err := r.getSenderAndBurntAmountForMiningBoostUpgrade(ctx, network, paymentAddress, txHash)
 	if err != nil && !errors.Is(err, ErrNotFound) {
 		return nil, errors.Wrap(err, "failed to getBurntAmountForMiningBoostUpgrade")
 	}
@@ -176,7 +177,10 @@ func (r *repository) FinalizeMiningBoostUpgrade(ctx context.Context, network Blo
 		}
 		return nil, ErrInvalidMiningBoostUpgradeTX
 	}
-	if txErr := r.checkTxHashUniqueness(ctx, userID, txHash, generateMiningBoostPaymentAddress(id), senderAddress, burntAmount, miningBoostLevelIndex); txErr != nil { //nolint:lll // .
+	if isBatchTransaction {
+		txHash = fmt.Sprintf("%v_%v", txHash, paymentAddress)
+	}
+	if txErr := r.checkTxHashUniqueness(ctx, userID, txHash, paymentAddress, senderAddress, burntAmount, miningBoostLevelIndex); txErr != nil { //nolint:lll // .
 		return nil, errors.Wrapf(txErr, "failed to check uniqueness of tx hash for userID: `%v`", userID)
 	}
 
@@ -266,7 +270,7 @@ func (r *repository) FinalizeMiningBoostUpgrade(ctx context.Context, network Blo
 	return &PendingMiningBoostUpgrade{
 		ExpiresAt:      time.New(stdlibtime.Unix(0, expireAt.UnixNano())),
 		ICEPrice:       strconv.FormatFloat(remainingPayment, 'f', miningBoostPricePrecision, 64),
-		PaymentAddress: generateMiningBoostPaymentAddress(id),
+		PaymentAddress: paymentAddress,
 	}, nil
 }
 
@@ -308,13 +312,14 @@ const (
 	erc20ABI = `[{"constant":true,"inputs":[{"name":"","type":"address"}],"name":"balanceOf","outputs":[{"name":"","type":"uint256"}],"type":"function"},{"constant":false,"inputs":[{"name":"_to","type":"address"},{"name":"_value","type":"uint256"}],"name":"transfer","outputs":[{"name":"","type":"bool"}],"type":"function"},{"anonymous":false,"inputs":[{"indexed":true,"name":"from","type":"address"},{"indexed":true,"name":"to","type":"address"},{"indexed":false,"name":"value","type":"uint256"}],"name":"Transfer","type":"event"}]`
 )
 
-func (r *repository) getSenderAndBurntAmountForMiningBoostUpgrade(ctx context.Context, network BlockchainNetworkType, paymentAddress, txHash string) (string, float64, error) {
+func (r *repository) getSenderAndBurntAmountForMiningBoostUpgrade(ctx context.Context, network BlockchainNetworkType, paymentAddress, txHash string) (string, float64, bool, error) {
 	networkClient := r.cfg.MiningBoost.networkClients[network][r.cfg.MiningBoost.networkEndpointCurrentLBIndex[network].Add(1)%uint64(len(r.cfg.MiningBoost.networkClients[network]))] //nolint:lll // .
+	isBatchTransaction := false
 
 	receipt, err := networkClient.TransactionReceipt(ctx, ethcommon.HexToHash(txHash))
 	if err != nil {
 		if errors.Is(err, ethereum.NotFound) {
-			return "", 0, ErrNotFound
+			return "", 0, isBatchTransaction, ErrNotFound
 		}
 		var rpcErr ethrpc.Error
 		if errors.As(err, &rpcErr) && rpcErr != nil && (rpcErr.ErrorCode() == 429 || rpcErr.ErrorCode() >= 500) {
@@ -323,17 +328,18 @@ func (r *repository) getSenderAndBurntAmountForMiningBoostUpgrade(ctx context.Co
 			return r.getSenderAndBurntAmountForMiningBoostUpgrade(ctx, network, paymentAddress, txHash)
 		}
 
-		return "", 0, errors.Wrapf(err, "failed to get TransactionReceipt for tx: %v", txHash)
+		return "", 0, isBatchTransaction, errors.Wrapf(err, "failed to get TransactionReceipt for tx: %v", txHash)
 	}
+	isBatchTransaction = len(receipt.Logs) > 1
 
 	parsedABI, err := ethabi.JSON(strings.NewReader(erc20ABI))
 	if err != nil {
-		return "", 0, errors.Wrapf(err, "failed to parse erc 20 ABI for tx: %v", txHash)
+		return "", 0, isBatchTransaction, errors.Wrapf(err, "failed to parse erc 20 ABI for tx: %v", txHash)
 	}
 
 	for _, vLog := range receipt.Logs {
 		if event, evErr := parsedABI.EventByID(vLog.Topics[0]); evErr != nil {
-			return "", 0, errors.Wrapf(evErr, "failed to get EventByID: %#v", vLog)
+			return "", 0, isBatchTransaction, errors.Wrapf(evErr, "failed to get EventByID: %#v", vLog)
 		} else if event.Name != "Transfer" {
 			continue
 		}
@@ -344,17 +350,17 @@ func (r *repository) getSenderAndBurntAmountForMiningBoostUpgrade(ctx context.Co
 
 		var transferEvent struct{ Value *big.Int }
 		if evErr := parsedABI.UnpackIntoInterface(&transferEvent, "Transfer", vLog.Data); evErr != nil {
-			return "", 0, errors.Wrapf(evErr, "failed to get UnpackIntoInterface[%#v]: %#v", &transferEvent, vLog)
+			return "", 0, isBatchTransaction, errors.Wrapf(evErr, "failed to get UnpackIntoInterface[%#v]: %#v", &transferEvent, vLog)
 		}
 
 		if ethcommon.HexToAddress(vLog.Topics[2].Hex()) == ethcommon.HexToAddress(paymentAddress) && transferEvent.Value.Cmp(new(big.Int).SetUint64(0)) > 0 {
 			amount, _ := transferEvent.Value.Float64()
 			sender := vLog.Topics[1].Hex()
-			return sender, amount / iceFlakesDenomination, nil
+			return sender, amount / iceFlakesDenomination, isBatchTransaction, nil
 		}
 	}
 
-	return "", 0, nil
+	return "", 0, isBatchTransaction, nil
 }
 
 const iceFlakesDenomination = 1_000_000_000_000_000_000
