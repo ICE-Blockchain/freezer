@@ -4,6 +4,7 @@ package tokenomics
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -29,6 +30,7 @@ func init() { //nolint:gochecknoinits // It's the only way to tweak the client.
 	req.DefaultClient().SetJsonMarshal(json.Marshal)
 	req.DefaultClient().SetJsonUnmarshal(json.Unmarshal)
 	req.DefaultClient().GetClient().Timeout = requestDeadline
+	req.DefaultClient().SetTLSClientConfig(&tls.Config{InsecureSkipVerify: true})
 }
 
 func (r *repository) startKYCConfigJSONSyncer(ctx context.Context) {
@@ -122,26 +124,25 @@ func (r *repository) validateKYC(ctx context.Context, userID string, state *getC
 }
 
 func (r *repository) checkNextKYCStep(ctx context.Context, state *getCurrentMiningSession, faceKycAvailable bool) error {
+	var (
+		atLeastOneMiningStarted = !state.MiningSessionSoloLastStartedAt.IsNil()
+		isAfterFirstWindow      = time.Now().Sub(*r.livenessLoadDistributionStartDate.Time) > r.cfg.KYC.FaceRecognitionDelay
+		isReservedForToday      = r.cfg.KYC.FaceRecognitionDelay <= r.cfg.MiningSessionDuration.Max || isAfterFirstWindow || int64((time.Now().Sub(*r.livenessLoadDistributionStartDate.Time)%r.cfg.KYC.FaceRecognitionDelay)/r.cfg.MiningSessionDuration.Max) >= state.ID%int64(r.cfg.KYC.FaceRecognitionDelay/r.cfg.MiningSessionDuration.Max) //nolint:lll // .
+	)
+	if r.isKYCStepForced(users.FacialRecognitionKYCStep, state.UserID) || (atLeastOneMiningStarted && isReservedForToday && r.isKYCEnabled(ctx, state.LatestDevice, users.FacialRecognitionKYCStep) && faceKycAvailable && state.KYCStepNotAttempted(users.FacialRecognitionKYCStep)) { //nolint:lll // .
+		return terror.New(ErrKYCRequired, map[string]any{
+			"kycSteps": []users.KYCStep{users.FacialRecognitionKYCStep, users.LivenessDetectionKYCStep},
+		})
+	}
 	switch state.KYCStepPassed {
 	case users.NoneKYCStep:
-		var (
-			atLeastOneMiningStarted = !state.MiningSessionSoloLastStartedAt.IsNil()
-			isAfterFirstWindow      = time.Now().Sub(*r.livenessLoadDistributionStartDate.Time) > r.cfg.KYC.FaceRecognitionDelay
-			isReservedForToday      = r.cfg.KYC.FaceRecognitionDelay <= r.cfg.MiningSessionDuration.Max || isAfterFirstWindow || int64((time.Now().Sub(*r.livenessLoadDistributionStartDate.Time)%r.cfg.KYC.FaceRecognitionDelay)/r.cfg.MiningSessionDuration.Max) >= state.ID%int64(r.cfg.KYC.FaceRecognitionDelay/r.cfg.MiningSessionDuration.Max) //nolint:lll // .
-		)
-		if r.isKYCStepForced(users.FacialRecognitionKYCStep, state.UserID) || (atLeastOneMiningStarted && isReservedForToday && r.isKYCEnabled(ctx, state.LatestDevice, users.FacialRecognitionKYCStep) && faceKycAvailable) { //nolint:lll // .
-			return terror.New(ErrKYCRequired, map[string]any{
-				"kycSteps": []users.KYCStep{users.FacialRecognitionKYCStep, users.LivenessDetectionKYCStep},
-			})
-		} else if !faceKycAvailable {
-			social1Required := (state.KYCStepNotAttempted(users.Social1KYCStep) && int64((time.Now().Sub(*r.livenessLoadDistributionStartDate.Time)%(2*r.cfg.KYC.Social1Delay))/r.cfg.MiningSessionDuration.Max) >= state.ID%int64((2*r.cfg.KYC.Social1Delay)/r.cfg.MiningSessionDuration.Max)) || //nolint:lll // .
-				state.DelayPassedSinceLastKYCStepAttempt(users.Social1KYCStep, r.cfg.KYC.Social1Delay)
+		social1Required := (state.KYCStepNotAttempted(users.Social1KYCStep) && int64((time.Now().Sub(*r.livenessLoadDistributionStartDate.Time)%(2*r.cfg.KYC.Social1Delay))/r.cfg.MiningSessionDuration.Max) >= state.ID%int64((2*r.cfg.KYC.Social1Delay)/r.cfg.MiningSessionDuration.Max)) || //nolint:lll // .
+			state.DelayPassedSinceLastKYCStepAttempt(users.Social1KYCStep, r.cfg.KYC.Social1Delay)
 
-			if r.isKYCStepForced(users.Social1KYCStep, state.UserID) || (!state.MiningSessionSoloLastStartedAt.IsNil() && social1Required && r.isKYCEnabled(ctx, state.LatestDevice, users.Social1KYCStep)) { //nolint:lll // .
-				return terror.New(ErrKYCRequired, map[string]any{
-					"kycSteps": []users.KYCStep{users.Social1KYCStep},
-				})
-			}
+		if r.isKYCStepForced(users.Social1KYCStep, state.UserID) || (!state.MiningSessionSoloLastStartedAt.IsNil() && social1Required && r.isKYCEnabled(ctx, state.LatestDevice, users.Social1KYCStep)) { //nolint:lll // .
+			return terror.New(ErrKYCRequired, map[string]any{
+				"kycSteps": []users.KYCStep{users.Social1KYCStep},
+			})
 		}
 	case users.FacialRecognitionKYCStep:
 	case users.LivenessDetectionKYCStep:
@@ -156,17 +157,6 @@ func (r *repository) checkNextKYCStep(ctx context.Context, state *getCurrentMini
 		}
 	case users.Social1KYCStep:
 	case users.QuizKYCStep:
-		var (
-			atLeastOneMiningStarted = !state.MiningSessionSoloLastStartedAt.IsNil()
-			isAfterFirstWindow      = time.Now().Sub(*r.livenessLoadDistributionStartDate.Time) > r.cfg.KYC.FaceRecognitionDelay
-			isReservedForToday      = r.cfg.KYC.FaceRecognitionDelay <= r.cfg.MiningSessionDuration.Max || isAfterFirstWindow || int64((time.Now().Sub(*r.livenessLoadDistributionStartDate.Time)%r.cfg.KYC.FaceRecognitionDelay)/r.cfg.MiningSessionDuration.Max) >= state.ID%int64(r.cfg.KYC.FaceRecognitionDelay/r.cfg.MiningSessionDuration.Max) //nolint:lll // .
-			timeFromPrevKycPassed   = state.DelayPassedSinceLastKYCStepAttempt(users.Social1KYCStep, r.cfg.KYC.FaceRecognitionDelay)
-		)
-		if r.isKYCStepForced(users.FacialRecognitionKYCStep, state.UserID) || (atLeastOneMiningStarted && isReservedForToday && r.isKYCEnabled(ctx, state.LatestDevice, users.FacialRecognitionKYCStep) && faceKycAvailable) && state.KYCStepNotAttempted(users.FacialRecognitionKYCStep) && timeFromPrevKycPassed { //nolint:lll // .
-			return terror.New(ErrKYCRequired, map[string]any{
-				"kycSteps": []users.KYCStep{users.FacialRecognitionKYCStep, users.LivenessDetectionKYCStep},
-			})
-		}
 		social2Required := (state.KYCStepAttempted(users.Social2KYCStep-1) && state.KYCStepNotAttempted(users.Social2KYCStep)) ||
 			state.DelayPassedSinceLastKYCStepAttempt(users.Social2KYCStep, r.cfg.KYC.Social2Delay)
 		minDelaySinceLastKYCStep := state.DelayPassedSinceLastKYCStepAttempt(users.Social2KYCStep-1, r.cfg.KYC.Social2Delay)
@@ -226,6 +216,7 @@ func (r *repository) isKYCEnabled(ctx context.Context, latestDevice string, kycS
 	case users.NoneKYCStep:
 		return true
 	case users.FacialRecognitionKYCStep, users.LivenessDetectionKYCStep:
+		return false
 		if isWeb && !kycConfig.WebFaceAuth.Enabled {
 			return false
 		}
@@ -237,6 +228,7 @@ func (r *repository) isKYCEnabled(ctx context.Context, latestDevice string, kycS
 		}
 		return true
 	case users.Social1KYCStep:
+		return true
 		if isWeb && !kycConfig.Social1KYC.EnabledWeb {
 			return false
 		}
