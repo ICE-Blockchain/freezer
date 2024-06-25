@@ -134,8 +134,7 @@ func (r *repository) checkNextKYCStep(ctx context.Context, state *getCurrentMini
 	}
 	switch state.KYCStepPassed {
 	case users.NoneKYCStep:
-		social1Required := (state.KYCStepNotAttempted(users.Social1KYCStep) && int64((time.Now().Sub(*r.livenessLoadDistributionStartDate.Time)%(2*r.cfg.KYC.Social1Delay))/r.cfg.MiningSessionDuration.Max) >= state.ID%int64((2*r.cfg.KYC.Social1Delay)/r.cfg.MiningSessionDuration.Max)) || //nolint:lll // .
-			state.DelayPassedSinceLastKYCStepAttempt(users.Social1KYCStep, r.cfg.KYC.Social1Delay)
+		social1Required := state.KYCStepNotAttempted(users.Social1KYCStep) || state.DelayPassedSinceLastKYCStepAttempt(users.Social1KYCStep, r.cfg.KYC.Social1Delay) //nolint:lll
 
 		if r.isKYCStepForced(users.Social1KYCStep, state.UserID) || (!state.MiningSessionSoloLastStartedAt.IsNil() && social1Required && r.isKYCEnabled(ctx, state.LatestDevice, users.Social1KYCStep)) { //nolint:lll // .
 			return terror.New(ErrKYCRequired, map[string]any{
@@ -144,7 +143,7 @@ func (r *repository) checkNextKYCStep(ctx context.Context, state *getCurrentMini
 		}
 	case users.FacialRecognitionKYCStep:
 	case users.LivenessDetectionKYCStep:
-		social1Required := (state.KYCStepAttempted(users.Social1KYCStep-1) && state.KYCStepNotAttempted(users.Social1KYCStep) && int64((time.Now().Sub(*r.livenessLoadDistributionStartDate.Time)%(2*r.cfg.KYC.Social1Delay))/r.cfg.MiningSessionDuration.Max) >= state.ID%int64((2*r.cfg.KYC.Social1Delay)/r.cfg.MiningSessionDuration.Max)) || //nolint:lll // .
+		social1Required := (state.KYCStepAttempted(users.Social1KYCStep-1) && state.KYCStepNotAttempted(users.Social1KYCStep)) || //nolint:lll // .
 			state.DelayPassedSinceLastKYCStepAttempt(users.Social1KYCStep, r.cfg.KYC.Social1Delay)
 		minDelaySinceLastLiveness := state.DelayPassedSinceLastKYCStepAttempt(users.LivenessDetectionKYCStep, r.cfg.MiningSessionDuration.Min)
 
