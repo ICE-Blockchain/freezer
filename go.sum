@@ -300,8 +300,8 @@ github.com/hpcloud/tail v1.0.0/go.mod h1:ab1qPbhIpdTxEkNHXyeSf5vhxWSCs/tWer42PpO
 github.com/huin/goupnp v1.3.0 h1:UvLUlWDNpoUdYzb2TCn+MuTWtcjXKSza2n6CBdQ0xXc=
 github.com/huin/goupnp v1.3.0/go.mod h1:gnGPsThkYa7bFi/KWmEysQRf48l2dvR5bxr2OFckNX8=
 github.com/ianlancetaylor/demangle v0.0.0-20200824232613-28f6c0f3b639/go.mod h1:aSSvb/t6k1mPoxDqO4vJh6VOCGPwU4O0C2/Eqndh1Sc=
-github.com/ice-blockchain/eskimo v1.337.0 h1:Jk9pktZ0eq+YGjxko1M0r2cyHwQuX0L78XbO+YSWfxA=
-github.com/ice-blockchain/eskimo v1.337.0/go.mod h1:HJO8wM9tHl0TjKVHskuSDkf07wJ7k7e0k7ytdkmrweQ=
+github.com/ice-blockchain/eskimo v1.339.0 h1:X5BA4yf1sJD+gMCG95wMcW0aiRIM7fImuqhn+AmTV6A=
+github.com/ice-blockchain/eskimo v1.339.0/go.mod h1:312jKeVpNmEdjaYb6OEANmUEAsCZkf4Ynm004S0UChM=
 github.com/ice-blockchain/go-tarantool-client v0.0.0-20230327200757-4fc71fa3f7bb h1:8TnFP3mc7O+tc44kv2e0/TpZKnEVUaKH+UstwfBwRkk=
 github.com/ice-blockchain/go-tarantool-client v0.0.0-20230327200757-4fc71fa3f7bb/go.mod h1:ZsQU7i3mxhgBBu43Oev7WPFbIjP4TniN/b1UPNGbrq8=
 github.com/ice-blockchain/wintr v1.142.0 h1:pojlgGyNsbcMh3Hv8v0tD7ahsekneYyeU4UZs5tINnw=

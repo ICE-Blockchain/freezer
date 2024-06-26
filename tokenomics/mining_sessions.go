@@ -89,11 +89,11 @@ func (r *repository) StartNewMiningSession( //nolint:funlen,gocognit // A lot of
 		old[0].MiningSessionSoloStartedAt.Equal(*old[0].ReferralsCountChangeGuardUpdatedAt.Time) {
 		return ErrDuplicate
 	}
-	shouldRollback, err := r.validateRollbackNegativeMiningProgress(old[0].PreStakingAllocation, old[0].PreStakingBonus, old[0].SlashingRateSolo, old[0].SlashingRateT0, old[0].SlashingRateT1, old[0].SlashingRateT2, old[0].MiningSessionSoloEndedAt, old[0].ResurrectSoloUsedAt, now, rollbackNegativeMiningProgress, old[0].BalanceSoloEthereum > 0 && old[0].BalanceSoloEthereum >= old[0].BalanceSolo) //nolint:lll // .
-	if err != nil {
+	if err = r.validateKYC(ctx, userID, old[0], skipKYCSteps); err != nil {
 		return err
 	}
-	if err = r.validateKYC(ctx, userID, old[0], skipKYCSteps); shouldRollback == nil && err != nil {
+	shouldRollback, err := r.validateRollbackNegativeMiningProgress(old[0].PreStakingAllocation, old[0].PreStakingBonus, old[0].SlashingRateSolo, old[0].SlashingRateT0, old[0].SlashingRateT1, old[0].SlashingRateT2, old[0].MiningSessionSoloEndedAt, old[0].ResurrectSoloUsedAt, now, rollbackNegativeMiningProgress, old[0].BalanceSoloEthereum > 0 && old[0].BalanceSoloEthereum >= old[0].BalanceSolo) //nolint:lll // .
+	if err != nil {
 		return err
 	}
 	if err = r.updateTMinus1(ctx, id, old[0].IDT0, old[0].IDTMinus1); err != nil {
