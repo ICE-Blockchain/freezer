@@ -46,6 +46,9 @@ func (s *service) InitializeMiningBoostUpgrade( //nolint:gocritic // False negat
 	ctx context.Context,
 	req *server.Request[InitializeMiningBoostUpgradeRequestBody, tokenomics.PendingMiningBoostUpgrade],
 ) (*server.Response[tokenomics.PendingMiningBoostUpgrade], *server.Response[server.ErrorResponse]) {
+	if true {
+		return nil, server.Forbidden(errors.New("temporarily disabled"))
+	}
 	resp, err := s.tokenomicsProcessor.InitializeMiningBoostUpgrade(ctx, *req.Data.MiningBoostLevelIndex, req.Data.UserID)
 	if err = errors.Wrapf(err, "failed to InitializeMiningBoostUpgrade for data:%#v", req.Data); err != nil {
 		switch {
