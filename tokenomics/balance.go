@@ -270,7 +270,7 @@ func (e *BalanceHistoryEntry) setBalanceDiffBonus(from float64) {
 	to := e.Balance.amount
 	if from < 0 && to > 0 {
 		e.Balance.Bonus = roundFloat64(((from - to) / from) * 100)
-	} else {
+	} else if from != 0 {
 		e.Balance.Bonus = roundFloat64(-1 * ((from - to) / from) * 100)
 	}
 }
