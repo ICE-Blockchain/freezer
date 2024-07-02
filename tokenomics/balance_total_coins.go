@@ -25,11 +25,12 @@ import (
 	"github.com/ice-blockchain/wintr/time"
 )
 
-func (r *repository) GetTotalCoinsSummary(ctx context.Context, days uint64, _ stdlibtime.Duration) (*TotalCoinsSummary, error) {
+func (r *repository) GetTotalCoinsSummary(ctx context.Context, days uint64, utcOffset stdlibtime.Duration) (*TotalCoinsSummary, error) {
 	var (
-		dates []stdlibtime.Time
-		res   = new(TotalCoinsSummary)
-		now   = time.Now()
+		dates    []stdlibtime.Time
+		res      = new(TotalCoinsSummary)
+		now      = time.Now()
+		location = stdlibtime.FixedZone(utcOffset.String(), int(utcOffset.Seconds()))
 	)
 
 	dates, res.TimeSeries = r.totalCoinsDates(now, days)
@@ -47,8 +48,7 @@ func (r *repository) GetTotalCoinsSummary(ctx context.Context, days uint64, _ st
 				break
 			}
 		}
-		child.Date = child.Date.Add(-1 * stdlibtime.Nanosecond)
-
+		child.Date = child.Date.Add(-stdlibtime.Duration(utcOffset.Seconds()) * stdlibtime.Second).In(location).Add(-1 * stdlibtime.Nanosecond)
 	}
 	details, err := r.loadCachedBlockchainDetails(ctx)
 	if err != nil {
