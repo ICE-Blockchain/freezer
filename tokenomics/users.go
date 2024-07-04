@@ -100,11 +100,6 @@ func (s *usersTableSource) deleteUser(ctx context.Context, usr *users.User) erro
 			dbUserAfterMiningStopped[0].IDTMinus1 *= -1
 		}
 		if idT0Key := model.SerializedUsersKey(dbUserAfterMiningStopped[0].IDT0); idT0Key != "" {
-			if amount := dbUserAfterMiningStopped[0].BalanceForT0; amount > 0.0 {
-				if err = pipeliner.HIncrByFloat(ctx, idT0Key, "balance_t1_pending", -amount).Err(); err != nil {
-					return err
-				}
-			}
 			if !dbUserBeforeMiningStopped[0].MiningSessionSoloEndedAt.IsNil() &&
 				dbUserBeforeMiningStopped[0].MiningSessionSoloEndedAt.After(*time.Now().Time) {
 				if err = pipeliner.HIncrBy(ctx, idT0Key, "active_t1_referrals", -1).Err(); err != nil {
