@@ -28,7 +28,7 @@ WITH
                   GROUP BY id)) t, req_dates WHERE t.created_at < req_dates.req_date
     ),
     valid_users AS (
-        select * from (SELECT active_users.*, 1 AS idx FROM active_users UNION ALL SELECT valid_users_stopped_processing.*, 2 AS idx FROM valid_users_stopped_processing) t ORDER BY idx LIMIT 1 BY id, created_at
+        select * from (SELECT active_users.* FROM active_users UNION ALL SELECT valid_users_stopped_processing.* FROM valid_users_stopped_processing) t LIMIT 1 BY id, created_at
     ),
     valid_t1_users AS (
         SELECT created_at, id_t0, SUM(balance_for_t0) AS balance_t1
