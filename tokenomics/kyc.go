@@ -123,11 +123,10 @@ func (r *repository) validateKYC(ctx context.Context, userID string, state *getC
 
 func (r *repository) checkNextKYCStep(ctx context.Context, state *getCurrentMiningSession, faceKycAvailable bool) error {
 	var (
-		atLeastOneMiningStarted = !state.MiningSessionSoloLastStartedAt.IsNil()
-		isAfterFirstWindow      = time.Now().Sub(*r.livenessLoadDistributionStartDate.Time) > r.cfg.KYC.FaceRecognitionDelay
-		isReservedForToday      = r.cfg.KYC.FaceRecognitionDelay <= r.cfg.MiningSessionDuration.Max || isAfterFirstWindow || int64((time.Now().Sub(*r.livenessLoadDistributionStartDate.Time)%r.cfg.KYC.FaceRecognitionDelay)/r.cfg.MiningSessionDuration.Max) >= state.ID%int64(r.cfg.KYC.FaceRecognitionDelay/r.cfg.MiningSessionDuration.Max) //nolint:lll // .
+		isAfterFirstWindow = time.Now().Sub(*r.livenessLoadDistributionStartDate.Time) > r.cfg.KYC.FaceRecognitionDelay
+		isReservedForToday = r.cfg.KYC.FaceRecognitionDelay <= r.cfg.MiningSessionDuration.Max || isAfterFirstWindow || int64((time.Now().Sub(*r.livenessLoadDistributionStartDate.Time)%r.cfg.KYC.FaceRecognitionDelay)/r.cfg.MiningSessionDuration.Max) >= state.ID%int64(r.cfg.KYC.FaceRecognitionDelay/r.cfg.MiningSessionDuration.Max) //nolint:lll // .
 	)
-	if r.isKYCStepForced(users.FacialRecognitionKYCStep, state.UserID) || (atLeastOneMiningStarted && isReservedForToday && r.isKYCEnabled(ctx, state.LatestDevice, users.FacialRecognitionKYCStep) && faceKycAvailable && state.KYCStepNotAttempted(users.FacialRecognitionKYCStep)) { //nolint:lll // .
+	if r.isKYCStepForced(users.FacialRecognitionKYCStep, state.UserID) || (isReservedForToday && r.isKYCEnabled(ctx, state.LatestDevice, users.FacialRecognitionKYCStep) && faceKycAvailable && state.KYCStepNotAttempted(users.FacialRecognitionKYCStep)) { //nolint:lll // .
 		return terror.New(ErrKYCRequired, map[string]any{
 			"kycSteps": []users.KYCStep{users.FacialRecognitionKYCStep, users.LivenessDetectionKYCStep},
 		})
