@@ -21,11 +21,10 @@ WITH
               WHERE (id, created_at) GLOBAL IN (
                   SELECT id, max(created_at)
                   FROM %[1]v
-                  WHERE
-                      created_at < '%[5]v'
-                    AND kyc_step_passed >= %[3]v
+                  WHERE kyc_step_passed >= %[3]v
                     AND (kyc_step_blocked = 0 OR kyc_step_blocked >= %[3]v + 1)
-                  GROUP BY id)) t, req_dates WHERE t.created_at < req_dates.req_date
+                  GROUP BY id
+                  HAVING max(created_at) < date_sub('%[5]v', INTERVAL 1 day))) t, req_dates WHERE t.created_at < req_dates.req_date
     ),
     valid_users AS (
         select * from (SELECT active_users.* FROM active_users UNION ALL SELECT valid_users_stopped_processing.* FROM valid_users_stopped_processing) t LIMIT 1 BY id, created_at
