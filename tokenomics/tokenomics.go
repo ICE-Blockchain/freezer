@@ -51,7 +51,7 @@ func New(ctx context.Context, _ context.CancelFunc) Repository {
 	now := time.Now()
 	repo.mustInitTotalCoinsCache(ctx, now)
 
-	go repo.keepTotalCoinsCacheUpdated(ctx, now)
+	go repo.keepTotalCoinsCacheUpdated(ctx)
 	go repo.keepBlockchainDetailsCacheUpdated(ctx)
 
 	return repo
@@ -88,7 +88,7 @@ func StartProcessor(ctx context.Context, cancel context.CancelFunc) Processor {
 	now := time.Now()
 	prc.mustInitTotalCoinsCache(ctx, now)
 
-	go prc.keepTotalCoinsCacheUpdated(ctx, now)
+	go prc.keepTotalCoinsCacheUpdated(ctx)
 	go prc.keepBlockchainDetailsCacheUpdated(ctx)
 	prc.extraBonusStartDate = extrabonusnotifier.MustGetExtraBonusStartDate(ctx, prc.db)
 	prc.extraBonusIndicesDistribution = extrabonusnotifier.MustGetExtraBonusIndicesDistribution(ctx, prc.db)

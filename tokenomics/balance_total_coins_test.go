@@ -5,13 +5,15 @@ package tokenomics
 import (
 	"context"
 	"testing"
-	"time"
+	stdlibtime "time"
 
 	"github.com/hashicorp/go-multierror"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	appCfg "github.com/ice-blockchain/wintr/config"
 	"github.com/ice-blockchain/wintr/connectors/storage/v3"
+	"github.com/ice-blockchain/wintr/time"
 )
 
 func helperCreateRepoWithRedisOnly(t *testing.T) *repository {
@@ -60,10 +62,10 @@ func TestGetCoinStatsBlockchainDetails(t *testing.T) {
 	})
 
 	t.Run("FillFromKeeper", func(t *testing.T) {
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
+		ctx, cancel := context.WithTimeout(context.Background(), stdlibtime.Second*2)
 		defer cancel()
 
-		repo.cfg.DetailedCoinMetrics.RefreshInterval = time.Minute
+		repo.cfg.DetailedCoinMetrics.RefreshInterval = stdlibtime.Minute
 		repo.keepBlockchainDetailsCacheUpdated(ctx)
 	})
 
@@ -82,4 +84,108 @@ func TestGetCoinStatsBlockchainDetails(t *testing.T) {
 	})
 
 	require.NoError(t, repo.Close())
+}
+
+func TestTotalCoinsDates_HistoryGenerationDeltaPassed(t *testing.T) {
+	t.Parallel()
+
+	var cfg Config
+	appCfg.MustLoadFromKey(applicationYamlKey, &cfg)
+	cfg.GlobalAggregationInterval.Parent = 24 * stdlibtime.Hour
+	cfg.GlobalAggregationInterval.Child = 1 * stdlibtime.Hour
+	repo := &repository{cfg: &cfg}
+
+	now := time.New(stdlibtime.Date(2023, 7, 9, 5, 15, 10, 1, stdlibtime.UTC))
+	dates, timeSeries := repo.totalCoinsDates(now, 7)
+	assert.Equal(t, []stdlibtime.Time{
+		now.Truncate(cfg.GlobalAggregationInterval.Parent),
+		now.Truncate(cfg.GlobalAggregationInterval.Parent).Add(-1 * 24 * stdlibtime.Hour),
+		now.Truncate(cfg.GlobalAggregationInterval.Parent).Add(-2 * 24 * stdlibtime.Hour),
+		now.Truncate(cfg.GlobalAggregationInterval.Parent).Add(-3 * 24 * stdlibtime.Hour),
+		now.Truncate(cfg.GlobalAggregationInterval.Parent).Add(-4 * 24 * stdlibtime.Hour),
+		now.Truncate(cfg.GlobalAggregationInterval.Parent).Add(-5 * 24 * stdlibtime.Hour),
+		now.Truncate(cfg.GlobalAggregationInterval.Parent).Add(-6 * 24 * stdlibtime.Hour),
+	}, dates)
+	assert.Equal(t, []*TotalCoinsTimeSeriesDataPoint{
+		{
+			Date:       now.Truncate(cfg.GlobalAggregationInterval.Parent),
+			TotalCoins: TotalCoins{Total: 0., Blockchain: 0., Standard: 0., PreStaking: 0.},
+		},
+		{
+			Date:       now.Truncate(cfg.GlobalAggregationInterval.Parent).Add(-1 * 24 * stdlibtime.Hour),
+			TotalCoins: TotalCoins{Total: 0., Blockchain: 0., Standard: 0., PreStaking: 0.},
+		},
+		{
+			Date:       now.Truncate(cfg.GlobalAggregationInterval.Parent).Add(-2 * 24 * stdlibtime.Hour),
+			TotalCoins: TotalCoins{Total: 0., Blockchain: 0., Standard: 0., PreStaking: 0.},
+		},
+		{
+			Date:       now.Truncate(cfg.GlobalAggregationInterval.Parent).Add(-3 * 24 * stdlibtime.Hour),
+			TotalCoins: TotalCoins{Total: 0., Blockchain: 0., Standard: 0., PreStaking: 0.},
+		},
+		{
+			Date:       now.Truncate(cfg.GlobalAggregationInterval.Parent).Add(-4 * 24 * stdlibtime.Hour),
+			TotalCoins: TotalCoins{Total: 0., Blockchain: 0., Standard: 0., PreStaking: 0.},
+		},
+		{
+			Date:       now.Truncate(cfg.GlobalAggregationInterval.Parent).Add(-5 * 24 * stdlibtime.Hour),
+			TotalCoins: TotalCoins{Total: 0., Blockchain: 0., Standard: 0., PreStaking: 0.},
+		},
+		{
+			Date:       now.Truncate(cfg.GlobalAggregationInterval.Parent).Add(-6 * 24 * stdlibtime.Hour),
+			TotalCoins: TotalCoins{Total: 0., Blockchain: 0., Standard: 0., PreStaking: 0.},
+		},
+	}, timeSeries)
+}
+
+func TestTotalCoinsDates_HistoryGenerationDeltaNotPassed(t *testing.T) {
+	t.Parallel()
+
+	var cfg Config
+	appCfg.MustLoadFromKey(applicationYamlKey, &cfg)
+	cfg.GlobalAggregationInterval.Parent = 24 * stdlibtime.Hour
+	cfg.GlobalAggregationInterval.Child = 1 * stdlibtime.Hour
+	repo := &repository{cfg: &cfg}
+
+	now := time.New(stdlibtime.Date(2023, 7, 9, 0, 15, 10, 1, stdlibtime.UTC))
+	dates, timeSeries := repo.totalCoinsDates(now, 7)
+	assert.Equal(t, []stdlibtime.Time{
+		now.Truncate(cfg.GlobalAggregationInterval.Parent).Add(-1 * 24 * stdlibtime.Hour),
+		now.Truncate(cfg.GlobalAggregationInterval.Parent).Add(-2 * 24 * stdlibtime.Hour),
+		now.Truncate(cfg.GlobalAggregationInterval.Parent).Add(-3 * 24 * stdlibtime.Hour),
+		now.Truncate(cfg.GlobalAggregationInterval.Parent).Add(-4 * 24 * stdlibtime.Hour),
+		now.Truncate(cfg.GlobalAggregationInterval.Parent).Add(-5 * 24 * stdlibtime.Hour),
+		now.Truncate(cfg.GlobalAggregationInterval.Parent).Add(-6 * 24 * stdlibtime.Hour),
+		now.Truncate(cfg.GlobalAggregationInterval.Parent).Add(-7 * 24 * stdlibtime.Hour),
+	}, dates)
+	assert.Equal(t, []*TotalCoinsTimeSeriesDataPoint{
+		{
+			Date:       now.Truncate(cfg.GlobalAggregationInterval.Parent).Add(-1 * 24 * stdlibtime.Hour),
+			TotalCoins: TotalCoins{Total: 0., Blockchain: 0., Standard: 0., PreStaking: 0.},
+		},
+		{
+			Date:       now.Truncate(cfg.GlobalAggregationInterval.Parent).Add(-2 * 24 * stdlibtime.Hour),
+			TotalCoins: TotalCoins{Total: 0., Blockchain: 0., Standard: 0., PreStaking: 0.},
+		},
+		{
+			Date:       now.Truncate(cfg.GlobalAggregationInterval.Parent).Add(-3 * 24 * stdlibtime.Hour),
+			TotalCoins: TotalCoins{Total: 0., Blockchain: 0., Standard: 0., PreStaking: 0.},
+		},
+		{
+			Date:       now.Truncate(cfg.GlobalAggregationInterval.Parent).Add(-4 * 24 * stdlibtime.Hour),
+			TotalCoins: TotalCoins{Total: 0., Blockchain: 0., Standard: 0., PreStaking: 0.},
+		},
+		{
+			Date:       now.Truncate(cfg.GlobalAggregationInterval.Parent).Add(-5 * 24 * stdlibtime.Hour),
+			TotalCoins: TotalCoins{Total: 0., Blockchain: 0., Standard: 0., PreStaking: 0.},
+		},
+		{
+			Date:       now.Truncate(cfg.GlobalAggregationInterval.Parent).Add(-6 * 24 * stdlibtime.Hour),
+			TotalCoins: TotalCoins{Total: 0., Blockchain: 0., Standard: 0., PreStaking: 0.},
+		},
+		{
+			Date:       now.Truncate(cfg.GlobalAggregationInterval.Parent).Add(-7 * 24 * stdlibtime.Hour),
+			TotalCoins: TotalCoins{Total: 0., Blockchain: 0., Standard: 0., PreStaking: 0.},
+		},
+	}, timeSeries)
 }

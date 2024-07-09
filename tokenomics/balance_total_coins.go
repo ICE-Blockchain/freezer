@@ -48,7 +48,7 @@ func (r *repository) GetTotalCoinsSummary(ctx context.Context, days uint64, utcO
 				break
 			}
 		}
-		child.Date = child.Date.Add(-stdlibtime.Duration(utcOffset.Seconds()) * stdlibtime.Second).In(location).Add(-1 * stdlibtime.Nanosecond)
+		child.Date = child.Date.Add(-stdlibtime.Duration(utcOffset.Seconds()) * stdlibtime.Second).In(location)
 	}
 	details, err := r.loadCachedBlockchainDetails(ctx)
 	if err != nil {
@@ -79,16 +79,24 @@ func (r *repository) loadCachedBlockchainDetails(ctx context.Context) (*Blockcha
 
 func (r *repository) totalCoinsDates(now *time.Time, days uint64) ([]stdlibtime.Time, []*TotalCoinsTimeSeriesDataPoint) {
 	var (
-		truncationInterval = r.cfg.GlobalAggregationInterval.Child
-		dates              = make([]stdlibtime.Time, 0, days)
-		timeSeries         = make([]*TotalCoinsTimeSeriesDataPoint, 0, days)
-		dayInterval        = r.cfg.GlobalAggregationInterval.Parent
-		start              = now.Add(-1 * truncationInterval).Truncate(truncationInterval)
+		dates                           = make([]stdlibtime.Time, 0, days)
+		timeSeries                      = make([]*TotalCoinsTimeSeriesDataPoint, 0, days)
+		dayInterval                     = r.cfg.GlobalAggregationInterval.Parent
+		historyGenerationDelta          = stdlibtime.Duration(float64(r.cfg.GlobalAggregationInterval.Child) * 0.75) //nolint:gomnd // .
+		notPassedHistoryGenerationDelta = false
 	)
-	dates = append(dates, start)
-	timeSeries = append(timeSeries, &TotalCoinsTimeSeriesDataPoint{Date: start})
-	for day := uint64(0); day < days-1; day++ {
+	for day := uint64(0); day < days; day++ {
 		date := now.Add(dayInterval * -1 * stdlibtime.Duration(day)).Truncate(dayInterval)
+		if now.Truncate(dayInterval).Equal(date) && now.Sub(date) < historyGenerationDelta {
+			notPassedHistoryGenerationDelta = true
+
+			continue
+		}
+		dates = append(dates, date)
+		timeSeries = append(timeSeries, &TotalCoinsTimeSeriesDataPoint{Date: date})
+	}
+	if notPassedHistoryGenerationDelta {
+		date := now.Add(dayInterval * -1 * stdlibtime.Duration(days)).Truncate(dayInterval)
 		dates = append(dates, date)
 		timeSeries = append(timeSeries, &TotalCoinsTimeSeriesDataPoint{Date: date})
 	}
@@ -200,7 +208,7 @@ func (r *repository) keepBlockchainDetailsCacheUpdated(ctx context.Context) {
 	}
 }
 
-func (r *repository) keepTotalCoinsCacheUpdated(ctx context.Context, initialNow *time.Time) {
+func (r *repository) keepTotalCoinsCacheUpdated(ctx context.Context) {
 	ticker := stdlibtime.NewTicker(stdlibtime.Duration(1+rand.Intn(10)) * (r.cfg.GlobalAggregationInterval.Child / 60)) //nolint:gosec,gomnd // Not an  issue.
 	defer ticker.Stop()
 	for {
@@ -208,14 +216,14 @@ func (r *repository) keepTotalCoinsCacheUpdated(ctx context.Context, initialNow 
 		case <-ticker.C:
 			var (
 				now                    = time.Now()
-				newDate                = now.Truncate(r.cfg.GlobalAggregationInterval.Child)
+				newDate                = now.Truncate(r.cfg.GlobalAggregationInterval.Parent)
 				historyGenerationDelta = stdlibtime.Duration(float64(r.cfg.GlobalAggregationInterval.Child) * 0.75) //nolint:gomnd // .
 			)
 			lastDateCached, err := r.getLastDateCached(ctx)
 			if err != nil {
 				log.Error(errors.Wrapf(err, "failed to get last date cached"))
 			}
-			if lastDateCached.IsNil() || (!lastDateCached.Equal(newDate) && now.Sub(newDate) >= historyGenerationDelta) {
+			if lastDateCached.IsNil() || (!lastDateCached.Truncate(r.cfg.GlobalAggregationInterval.Parent).Equal(newDate) && now.Sub(newDate) >= historyGenerationDelta) {
 				dwhCtx, cancel := context.WithTimeout(ctx, 1*stdlibtime.Minute)
 				lock, err := redislock.Obtain(dwhCtx, r.db, totalCoinStatsCacheLockKey, totalCoinStatsCacheLockDuration, &redislock.Options{RetryStrategy: redislock.NoRetry()})
 				if err != nil && errors.Is(err, redislock.ErrNotObtained) {
