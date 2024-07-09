@@ -278,7 +278,7 @@ func (s *completedTasksSource) Process(ctx context.Context, message *messagebrok
 	if ctx.Err() != nil || len(message.Value) == 0 {
 		return errors.Wrap(ctx.Err(), "unexpected deadline while processing message")
 	}
-	const requiredCompletedTasks, adoptionMultiplicationFactor = 6, 150
+	const requiredCompletedTasks, adoptionMultiplicationFactor = 6, 168
 	var val struct {
 		UserID         string `json:"userId" example:"edfd8c02-75e0-4687-9ac2-1ce4723865c4"`
 		CompletedTasks uint64 `json:"completedTasks,omitempty" example:"3"`
