@@ -153,6 +153,12 @@ func (s *service) StartNewMiningSession( //nolint:gocritic // False negative.
 			}
 
 			fallthrough
+		case errors.Is(err, tokenomics.ErrKYCPassedOnAnotherAccount):
+			if tErr := terror.As(err); tErr != nil {
+				return nil, server.Conflict(err, KYCPassedOnAnotherAccountErrorCode, tErr.Data)
+			}
+
+			fallthrough
 		case errors.Is(err, tokenomics.ErrRaceCondition):
 			return nil, server.BadRequest(err, raceConditionErrorCode)
 		case errors.Is(err, tokenomics.ErrDuplicate):

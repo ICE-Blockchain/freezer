@@ -106,9 +106,14 @@ func (r *repository) validateKYC(ctx context.Context, userID string, state *getC
 			}
 		}
 	}
-	faceKycAvailable, err := r.overrideKYCStateWithEskimoKYCState(ctx, userID, state, skipKYCSteps, nextKYCStep)
+	faceKycAvailable, faceKycOriginalAccount, err := r.overrideKYCStateWithEskimoKYCState(ctx, userID, state, skipKYCSteps, nextKYCStep)
 	if err != nil {
 		return errors.Wrapf(err, "failed to overrideKYCStateWithEskimoKYCState for %#v", state)
+	}
+	if faceKycOriginalAccount != "" && r.isKYCEnabled(ctx, state.LatestDevice, users.FacialRecognitionKYCStep) {
+		return terror.New(ErrKYCPassedOnAnotherAccount, map[string]any{
+			"account": faceKycOriginalAccount,
+		})
 	}
 	if (state.KYCStepBlocked == users.FacialRecognitionKYCStep && r.isKYCEnabled(ctx, state.LatestDevice, users.FacialRecognitionKYCStep)) ||
 		((state.KYCStepBlocked == users.QuizKYCStep) && r.isKYCEnabled(ctx, state.LatestDevice, users.QuizKYCStep)) {
@@ -439,7 +444,7 @@ Because existing users have empty KYCState in dragonfly cuz usersTableSource mig
 And because we might need to reset any kyc steps for the user prior to starting to mine.
 So we need to call Eskimo for that, to be sure we have the valid kyc state for the user before starting to mine.
 */
-func (r *repository) overrideKYCStateWithEskimoKYCState(ctx context.Context, userID string, state *getCurrentMiningSession, skipKYCSteps []users.KYCStep, nextKYCStep users.KYCStep) (faceKycAvailable bool, err error) {
+func (r *repository) overrideKYCStateWithEskimoKYCState(ctx context.Context, userID string, state *getCurrentMiningSession, skipKYCSteps []users.KYCStep, nextKYCStep users.KYCStep) (faceKycAvailable bool, faceKycOriginalAccount string, err error) {
 	request := req.
 		SetContext(ctx).
 		SetRetryCount(25).
@@ -474,11 +479,11 @@ func (r *repository) overrideKYCStateWithEskimoKYCState(ctx context.Context, use
 		request = request.AddQueryParams("nextKYCStep", strconv.Itoa(int(nextKYCStep)))
 	}
 	if resp, err := request.Post(fmt.Sprintf("%v/users/%v", r.cfg.KYC.TryResetKYCStepsURL, userID)); err != nil {
-		return false, errors.Wrapf(err, "failed to fetch eskimo user state for userID:%v, skipKYCSteps:%#v", userID, skipKYCSteps)
+		return false, "", errors.Wrapf(err, "failed to fetch eskimo user state for userID:%v, skipKYCSteps:%#v", userID, skipKYCSteps)
 	} else if statusCode := resp.GetStatusCode(); statusCode != http.StatusOK {
-		return false, errors.Errorf("[%v]failed to fetch eskimo user state for userID:%v, skipKYCSteps:%#v", statusCode, userID, skipKYCSteps)
+		return false, "", errors.Errorf("[%v]failed to fetch eskimo user state for userID:%v, skipKYCSteps:%#v", statusCode, userID, skipKYCSteps)
 	} else if data, err2 := resp.ToBytes(); err2 != nil {
-		return false, errors.Wrapf(err2, "failed to read body of eskimo user state request for userID:%v, skipKYCSteps:%#v", userID, skipKYCSteps)
+		return false, "", errors.Wrapf(err2, "failed to read body of eskimo user state request for userID:%v, skipKYCSteps:%#v", userID, skipKYCSteps)
 	} else {
 		var usr struct {
 			HiddenProfileElements *users.Enum[users.HiddenProfileElement] `json:"hiddenProfileElements,omitempty" redis:"-"`
@@ -494,10 +499,11 @@ func (r *repository) overrideKYCStateWithEskimoKYCState(ctx context.Context, use
 			model.DeserializedUsersKey
 			model.HideRankingField
 			model.T1ReferralsSharingEnabledField
-			KycFaceAvailable bool `json:"kycFaceAvailable" redis:"-"`
+			KycFaceAvailable       bool   `json:"kycFaceAvailable" redis:"-"`
+			KycFaceOriginalAccount string `json:"kycFaceOriginalAccount" redis:"-"`
 		}
 		if err3 := json.Unmarshal(data, &usr); err3 != nil {
-			return false, errors.Wrapf(err3, "failed to unmarshal into %#v, data: `%v`, skipKYCSteps:%#v", &usr, string(data), skipKYCSteps)
+			return false, "", errors.Wrapf(err3, "failed to unmarshal into %#v, data: `%v`, skipKYCSteps:%#v", &usr, string(data), skipKYCSteps)
 		} else {
 			usr.DeserializedUsersKey = state.DeserializedUsersKey
 			state.KYCState = usr.KYCState
@@ -505,7 +511,7 @@ func (r *repository) overrideKYCStateWithEskimoKYCState(ctx context.Context, use
 			usr.CreatedAt = time.New(usr.AccountCreatedAt)
 			usr.ProfilePictureName = r.pictureClient.StripDownloadURL(usr.ProfilePictureName)
 
-			return usr.KycFaceAvailable, multierror.Append(
+			return usr.KycFaceAvailable, usr.KycFaceOriginalAccount, multierror.Append(
 				errors.Wrapf(r.updateUsernameKeywords(ctx, state.ID, state.Username, usr.Username), "failed to updateUsernameKeywords for oldUser:%#v, user:%#v", state, usr),                         //nolint:lll // .
 				errors.Wrapf(r.updateReferredBy(ctx, state.ID, &state.IDT0, &state.IDTMinus1, state.UserID, usr.ReferredBy, state.BalanceForTMinus1), "failed to updateReferredBy for user:%#v", usr), //nolint:lll // .
 				errors.Wrapf(storage.Set(ctx, r.db, &usr), "failed to db set partial state:%#v, userID:%v, skipKYCSteps:%#v", &usr, userID, skipKYCSteps),
