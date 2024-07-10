@@ -48,6 +48,7 @@ var (
 	ErrNegativeMiningProgressDecisionRequired          = errors.New("you have negative mining progress, please decide what to do with it")
 	ErrKYCRequired                                     = errors.New("user needs to complete one or more kyc steps or skip any of them(if allowed)")
 	ErrMiningDisabled                                  = errors.New("mining is disabled")
+	ErrKYCPassedOnAnotherAccount                       = errors.New("kyc is passed on another account")
 	ErrRaceCondition                                   = errors.New("race condition")
 	ErrGlobalRankHidden                                = errors.New("global rank is hidden")
 	ErrDecreasingPreStakingAllocationOrYearsNotAllowed = errors.New("decreasing pre-staking allocation or years not allowed")

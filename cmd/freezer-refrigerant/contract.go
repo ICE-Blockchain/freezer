@@ -60,6 +60,7 @@ const (
 	resurrectionDecisionRequiredErrorCode         = "RESURRECTION_DECISION_REQUIRED"
 	kycStepsRequiredErrorCode                     = "KYC_STEPS_REQUIRED"
 	miningDisabledErrorCode                       = "MINING_DISABLED"
+	KYCPassedOnAnotherAccountErrorCode            = "KYC_PASSED_ON_ANOTHER_ACCOUNT"
 	noExtraBonusAvailableErrorCode                = "NO_EXTRA_BONUS_AVAILABLE"
 	extraBonusAlreadyClaimedErrorCode             = "EXTRA_BONUS_ALREADY_CLAIMED"
 	noPendingMiningBoostUpgradeFoundErrorCode     = "NO_PENDING_MINING_BOOST_UPGRADE_FOUND"
