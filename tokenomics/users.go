@@ -449,7 +449,7 @@ end
 redis.call('HSETNX', KEYS[1], 'balance_total_standard', %[1]v)
 redis.call('HSETNX', KEYS[1], 'balance_total_minted', %[1]v)
 redis.call('HSETNX', KEYS[1], 'balance_solo', %[1]v)
-redis.call('HSETNX', KEYS[1], 'welcome_bonus_v2_applied', true)
+redis.call('HSETNX', KEYS[1], 'welcome_bonus_v2_applied', 'true')
 redis.call('HSETNX', KEYS[1], 'user_id', ARGV[1])
 `, strconv.FormatFloat(WelcomeBonusV2Amount, 'f', 1, 64)))
 )
