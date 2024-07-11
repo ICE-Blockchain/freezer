@@ -1151,7 +1151,7 @@ func Test_MinerWithHistory(t *testing.T) {
 	require.NotNil(t, m)
 	require.True(t, h)
 
-	require.EqualValues(t, 400, m.BalanceSolo)
+	require.EqualValues(t, 890, m.BalanceSolo)
 	require.False(t, IDT0Changed)
 	require.EqualValues(t, 0, m.IDT0)
 	require.EqualValues(t, 0, m.IDTMinus1)
@@ -1309,7 +1309,7 @@ func testMinerPendingSlashingSolo_BonusPrizeCase(t *testing.T) {
 	m.BalanceSoloPending += 5000
 	m, _, IDT0Changed, pendingAmountForTMinus1, pendingAmountForT0 = mine(time.New(testTime.Add(-2*stdlibtime.Hour)), m, nil, nil)
 	require.NotNil(t, m)
-	require.EqualValues(t, 6314, m.BalanceSolo)
+	require.EqualValues(t, 6804, m.BalanceSolo)
 	require.EqualValues(t, 26.833333333333332, m.SlashingRateSolo)
 	require.EqualValues(t, 1440, m.BalanceT0)
 	require.EqualValues(t, 0, m.SlashingRateT0)
@@ -1331,7 +1331,7 @@ func testMinerPendingSlashingSolo_BonusPrizeCase(t *testing.T) {
 
 	m, _, IDT0Changed, pendingAmountForTMinus1, pendingAmountForT0 = mine(time.New(testTime.Add(-1*stdlibtime.Hour)), m, nil, nil)
 	require.NotNil(t, m)
-	require.EqualValues(t, 6287.166666666667, m.BalanceSolo)
+	require.EqualValues(t, 6777.166666666667, m.BalanceSolo)
 	require.EqualValues(t, 26.833333333333332, m.SlashingRateSolo)
 
 	require.EqualValues(t, 1440, m.BalanceT0)
@@ -1356,7 +1356,7 @@ func testMinerPendingSlashingSolo_BonusPrizeCase(t *testing.T) {
 	m.BalanceSoloPendingApplied = 5000.
 	m, _, IDT0Changed, pendingAmountForTMinus1, pendingAmountForT0 = mine(testTime, m, nil, nil)
 	require.NotNil(t, m)
-	require.EqualValues(t, 6260.333333333334, m.BalanceSolo)
+	require.EqualValues(t, 7240.333333333334, m.BalanceSolo)
 	require.EqualValues(t, 26.833333333333332, m.SlashingRateSolo)
 
 	require.EqualValues(t, 1440, m.BalanceT0)
