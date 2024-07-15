@@ -4,12 +4,12 @@ package tokenomics
 
 import (
 	"fmt"
-	"github.com/ice-blockchain/wintr/log"
 	"testing"
 	stdlibtime "time"
 
 	"github.com/stretchr/testify/assert"
 
+	"github.com/ice-blockchain/wintr/log"
 	"github.com/ice-blockchain/wintr/time"
 )
 
