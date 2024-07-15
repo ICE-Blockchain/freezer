@@ -1,10 +1,14 @@
+// SPDX-License-Identifier: ice License 1.0
+
 package tokenomics
 
 import (
-	"github.com/ice-blockchain/wintr/time"
-	"github.com/stretchr/testify/assert"
 	"testing"
 	stdlibtime "time"
+
+	"github.com/stretchr/testify/assert"
+
+	"github.com/ice-blockchain/wintr/time"
 )
 
 func TestLoadBalanceKYCUsers(t *testing.T) {
