@@ -211,7 +211,7 @@ func (r *repository) userLoadBalancedForKYC(kycStep users.KYCStep, userID int64)
 
 func loadBalanceKYC(now, startDate *time.Time, lbDuration, miningDuration stdlibtime.Duration, userID int64) bool {
 	return startDate == nil || lbDuration == 0 || now.After(startDate.Add(lbDuration)) || now.Before(*startDate.Time) ||
-		(now.After(*startDate.Time) && int64(now.Sub(*startDate.Time)%(miningDuration)) >= userID%int64(lbDuration/miningDuration))
+		(now.After(*startDate.Time) && int64(now.Sub(*startDate.Time).Seconds())%int64(lbDuration/miningDuration) >= userID%int64(lbDuration/miningDuration))
 }
 
 func (r *repository) isLastKYCStep(kycStep users.KYCStep) bool {
