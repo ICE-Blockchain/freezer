@@ -83,6 +83,20 @@ func (r *repository) syncKYCConfigJSON(ctx context.Context) error {
 				return errors.Errorf("there's something wrong with the KYCConfigJSON body: %v", body)
 			}
 		}
+		if kycConfig.Social2KYC.Duration != "" {
+			d, dErr := stdlibtime.ParseDuration(kycConfig.Social2KYC.Duration)
+			if dErr != nil {
+				return errors.Wrapf(dErr, "failed to deserialize duration %v", kycConfig.Social2KYC.Duration)
+			}
+			kycConfig.Social2KYC.KYCDuration = d
+		}
+		if kycConfig.Social1KYC.Duration != "" {
+			d, dErr := stdlibtime.ParseDuration(kycConfig.Social1KYC.Duration)
+			if dErr != nil {
+				return errors.Wrapf(dErr, "failed to deserialize duration %v", kycConfig.Social1KYC.Duration)
+			}
+			kycConfig.Social1KYC.KYCDuration = d
+		}
 		r.cfg.kycConfigJSON.Swap(&kycConfig)
 
 		return nil
@@ -185,10 +199,10 @@ func (r *repository) userLoadBalancedForKYC(kycStep users.KYCStep, userID int64)
 		switch kycStep {
 		case users.Social1KYCStep:
 			startDate = cfgVal.Social1KYC.StartDate
-			lbDuration = cfgVal.Social1KYC.Duration
+			lbDuration = cfgVal.Social1KYC.KYCDuration
 		case users.Social2KYCStep:
 			startDate = cfgVal.Social2KYC.StartDate
-			lbDuration = cfgVal.Social2KYC.Duration
+			lbDuration = cfgVal.Social2KYC.KYCDuration
 		}
 	}
 
