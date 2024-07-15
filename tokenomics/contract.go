@@ -338,12 +338,13 @@ type (
 			Enabled            bool     `json:"enabled"`
 		} `json:"face-auth"`
 		Social1KYC struct {
-			DisabledVersions   []string            `json:"disabledVersions"`
-			ForceKYCForUserIds []string            `json:"forceKYCForUserIds"`
-			EnabledMobile      bool                `json:"enabledMobile"`
-			EnabledWeb         bool                `json:"enabledWeb"`
-			StartDate          *time.Time          `json:"startDate"`
-			Duration           stdlibtime.Duration `json:"duration"`
+			DisabledVersions   []string   `json:"disabledVersions"`
+			ForceKYCForUserIds []string   `json:"forceKYCForUserIds"`
+			EnabledMobile      bool       `json:"enabledMobile"`
+			EnabledWeb         bool       `json:"enabledWeb"`
+			StartDate          *time.Time `json:"startDate"`
+			Duration           string     `json:"duration"`
+			KYCDuration        stdlibtime.Duration
 		} `json:"social1-kyc"`
 		QuizKYC struct {
 			DisabledVersions   []string `json:"disabledVersions"`
@@ -351,12 +352,13 @@ type (
 			Enabled            bool     `json:"enabled"`
 		} `json:"quiz-kyc"`
 		Social2KYC struct {
-			DisabledVersions   []string            `json:"disabledVersions"`
-			ForceKYCForUserIds []string            `json:"forceKYCForUserIds"`
-			EnabledMobile      bool                `json:"enabledMobile"`
-			EnabledWeb         bool                `json:"enabledWeb"`
-			StartDate          *time.Time          `json:"startDate"`
-			Duration           stdlibtime.Duration `json:"duration"`
+			DisabledVersions   []string   `json:"disabledVersions"`
+			ForceKYCForUserIds []string   `json:"forceKYCForUserIds"`
+			EnabledMobile      bool       `json:"enabledMobile"`
+			EnabledWeb         bool       `json:"enabledWeb"`
+			StartDate          *time.Time `json:"startDate"`
+			Duration           string     `json:"duration"`
+			KYCDuration        stdlibtime.Duration
 		} `json:"social2-kyc"`
 		WebFaceAuth struct {
 			Enabled bool `json:"enabled"`
