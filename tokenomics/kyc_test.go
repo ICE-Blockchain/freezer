@@ -18,8 +18,9 @@ func TestLoadBalanceKYCUsers(t *testing.T) {
 	startDate := time.New(now.Add(-1 * stdlibtime.Minute))
 	duration := 10 * stdlibtime.Minute
 	miningDuration := 1 * stdlibtime.Minute
+	assert.True(t, loadBalanceKYC(time.New(startDate.Add(1*stdlibtime.Second)), startDate, duration, miningDuration, 0))
 	assert.True(t, loadBalanceKYC(now, startDate, duration, miningDuration, 0))
-	assert.False(t, loadBalanceKYC(now, startDate, duration, miningDuration, 1))
+	assert.True(t, loadBalanceKYC(now, startDate, duration, miningDuration, 1))
 	assert.False(t, loadBalanceKYC(now, startDate, duration, miningDuration, 2))
 	assert.False(t, loadBalanceKYC(now, startDate, duration, miningDuration, 3))
 	assert.False(t, loadBalanceKYC(now, startDate, duration, miningDuration, 4))
@@ -29,13 +30,13 @@ func TestLoadBalanceKYCUsers(t *testing.T) {
 	assert.False(t, loadBalanceKYC(now, startDate, duration, miningDuration, 8))
 	assert.False(t, loadBalanceKYC(now, startDate, duration, miningDuration, 9))
 	assert.True(t, loadBalanceKYC(now, startDate, duration, miningDuration, 10))
-	assert.False(t, loadBalanceKYC(now, startDate, duration, miningDuration, 11))
-	assert.True(t, loadBalanceKYC(time.New(now.Add(2*stdlibtime.Second)), startDate, duration, miningDuration, 12))
-	assert.True(t, loadBalanceKYC(time.New(now.Add(3*stdlibtime.Second)), startDate, duration, miningDuration, 12))
-	assert.True(t, loadBalanceKYC(time.New(now.Add(3*stdlibtime.Second)), startDate, duration, miningDuration, 13))
-	assert.False(t, loadBalanceKYC(time.New(now.Add(2*stdlibtime.Second)), startDate, duration, miningDuration, 13)) // for 13th not reached yet
-	assert.True(t, loadBalanceKYC(time.New(now.Add(4*stdlibtime.Second)), startDate, duration, miningDuration, 14))
-	assert.True(t, loadBalanceKYC(time.New(now.Add(4*stdlibtime.Second)), startDate, duration, miningDuration, 24))
+	assert.True(t, loadBalanceKYC(now, startDate, duration, miningDuration, 11))
+	assert.True(t, loadBalanceKYC(time.New(now.Add(1*stdlibtime.Minute)), startDate, duration, miningDuration, 11))
+	assert.True(t, loadBalanceKYC(time.New(now.Add(1*stdlibtime.Minute)), startDate, duration, miningDuration, 12))
+	assert.False(t, loadBalanceKYC(time.New(now.Add(1*stdlibtime.Minute)), startDate, duration, miningDuration, 13))
+	assert.True(t, loadBalanceKYC(time.New(now.Add(2*stdlibtime.Minute)), startDate, duration, miningDuration, 13))
+	assert.False(t, loadBalanceKYC(time.New(now.Add(2*stdlibtime.Minute)), startDate, duration, miningDuration, 14))
+	assert.True(t, loadBalanceKYC(time.New(now.Add(3*stdlibtime.Minute)), startDate, duration, miningDuration, 14))
 }
 
 func TestLoadBalanceKYCUsersALotOfUsers(t *testing.T) {
