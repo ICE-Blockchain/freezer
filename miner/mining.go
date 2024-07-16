@@ -50,12 +50,14 @@ func mine(now *time.Time, usr *user, t0Ref, tMinus1Ref *referral) (updatedUser *
 		miningSessionRatio = 24.
 	}
 	if updatedUser.MiningSessionSoloEndedAt.Before(*now.Time) && (updatedUser.reachedSlashingFloor() || updatedUser.slashingDisabled()) {
+		fullSlashingDuration := stdlibtime.Duration(cfg.SlashingDaysCount * int64(miningSessionRatio) * int64(miningPeriod))
 		shouldGenerateHistory = (updatedUser.BalanceLastUpdatedAt.Year() != now.Year() ||
 			updatedUser.BalanceLastUpdatedAt.YearDay() != now.YearDay() ||
 			(cfg.Development && updatedUser.BalanceLastUpdatedAt.Minute() != now.Minute())) &&
 			((updatedUser.slashingDisabled() && updatedUser.BalanceLastUpdatedAt.After(*updatedUser.MiningSessionSoloEndedAt.Time) &&
 				updatedUser.BalanceLastUpdatedAt.Sub(*updatedUser.MiningSessionSoloEndedAt.Time) < cfg.MiningSessionDuration.Min) ||
 				(updatedUser.reachedSlashingFloor() &&
+					now.After(updatedUser.MiningSessionSoloEndedAt.Time.Add(fullSlashingDuration)) &&
 					now.Sub(*updatedUser.MiningSessionSoloEndedAt.Time) < stdlibtime.Duration((cfg.SlashingDaysCount+1)*int64(miningSessionRatio)*int64(miningPeriod))))
 
 		if shouldGenerateHistory {

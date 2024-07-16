@@ -1122,7 +1122,7 @@ func Test_MinerPending(t *testing.T) {
 
 func Test_MinerWithHistory(t *testing.T) {
 	t.Parallel()
-
+	// 24h not passed yet -> no history.
 	m := newUser()
 	m.BalanceLastUpdatedAt = time.New(testTime.Add(-stdlibtime.Hour * 2))
 	m.BalanceForT0 = 1440
@@ -1142,7 +1142,7 @@ func Test_MinerWithHistory(t *testing.T) {
 	require.EqualValues(t, 0, m.BalanceForTMinus1)
 
 	t.Logf("new:     %p", m)
-
+	// 24h passed -> generate history.
 	m.BalanceLastUpdatedAt = time.New(testTime.Add(-stdlibtime.Hour * 24))
 	m.BalanceForT0 = 1440
 	m.BalanceForTMinus1 = 1440
@@ -1159,6 +1159,35 @@ func Test_MinerWithHistory(t *testing.T) {
 	require.EqualValues(t, 0, pendingAmountForT0)
 	require.EqualValues(t, 0, m.BalanceForT0)
 	require.EqualValues(t, 0, m.BalanceForTMinus1)
+
+	slashingDisabledMiningBoostIx := model.FlexibleUint64(1)
+	m.MiningBoostLevelIndex = &slashingDisabledMiningBoostIx
+	// User with disabled slashing, but session is not fully processed yet -> no history.
+	m.BalanceLastUpdatedAt = timeDelta(23*stdlibtime.Hour - 1*stdlibtime.Second)
+	var m_nil *user
+	m_nil, h, _, _, _ = mine(timeDelta(48*stdlibtime.Hour), m, nil, nil)
+	require.False(t, h)
+	require.Nil(t, m_nil)
+	// User with disabled slashing, and session is completed (balanceLastUpdatedAt after session end) -> history.
+	m.BalanceLastUpdatedAt = timeDelta(23*stdlibtime.Hour + 1*stdlibtime.Second)
+	m.MiningBoostLevelIndex = &slashingDisabledMiningBoostIx
+	m, h, _, _, _ = mine(timeDelta(48*stdlibtime.Hour), m, nil, nil)
+	require.True(t, h)
+	require.NotNil(t, m)
+	require.Equal(t, timeDelta(48*stdlibtime.Hour), m.BalanceLastUpdatedAt)
+	// User is on slashing floor and last day of slashing -> history.
+	m.BalanceSolo = 0.99
+	m.BalanceT0 = 0
+	m.BalanceT1 = 0
+	m.BalanceT2 = 0
+	require.True(t, m.reachedSlashingFloor())
+	m.MiningSessionSoloLastStartedAt = timeDelta(-11 * 24 * stdlibtime.Hour)
+	m.MiningSessionSoloEndedAt = timeDelta(-10 * 24 * stdlibtime.Hour)
+	m.MiningBoostLevelIndex = nil
+	m, h, _, _, _ = mine(timeDelta(1*stdlibtime.Minute), m, nil, nil)
+	require.True(t, h)
+	require.NotNil(t, m)
+	require.Equal(t, timeDelta(1*stdlibtime.Minute), m.BalanceLastUpdatedAt)
 }
 
 func Test_MinerNegativeBalance(t *testing.T) {

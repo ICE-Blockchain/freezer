@@ -5,12 +5,14 @@ logger:
   encoder: console
   level: debug
 tokenomics:
+  slashingFloor: 1
   adoption:
     milestones: 7
     startingBaseMiningRate: 16
     durationBetweenMilestones: 168h
   miningSessionDuration:
     max: 24h
+    min: 12h
   extraBonuses:
     duration: 24h
   mining-boost:
