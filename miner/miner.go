@@ -366,7 +366,7 @@ func (m *miner) mine(ctx context.Context, workerNumber int64) {
 			if isAdvancedTeamDisabled(usr.LatestDevice) {
 				usr.ActiveT2Referrals = 0
 			}
-			beforeWelcomeBonusV2Applied := usr.WelcomeBonusV2Applied == nil || !*usr.WelcomeBonusV2Applied
+			beforeWelcomeBonusV2NotApplied := usr.WelcomeBonusV2Applied == nil || !*usr.WelcomeBonusV2Applied
 			updatedUser, shouldGenerateHistory, IDT0Changed, pendingAmountForTMinus1, pendingAmountForT0 := mine(now, usr, t0Ref, tMinus1Ref)
 			if shouldGenerateHistory {
 				syncQuizUserIDs = append(syncQuizUserIDs, usr.UserID)
@@ -414,7 +414,7 @@ func (m *miner) mine(ctx context.Context, workerNumber int64) {
 				if t0Ref != nil && t0Ref.ID != 0 && pendingAmountForT0 != 0 {
 					pendingBalancesForT0[t0Ref.ID] += pendingAmountForT0
 				}
-				if afterWelcomeBonusV2Applied := updatedUser.WelcomeBonusV2Applied != nil && *updatedUser.WelcomeBonusV2Applied; t0Ref != nil && t0Ref.ID != 0 && !beforeWelcomeBonusV2Applied && afterWelcomeBonusV2Applied {
+				if afterWelcomeBonusV2Applied := updatedUser.WelcomeBonusV2Applied != nil && *updatedUser.WelcomeBonusV2Applied; t0Ref != nil && t0Ref.ID != 0 && beforeWelcomeBonusV2NotApplied && afterWelcomeBonusV2Applied {
 					idT0 := t0Ref.ID
 					if idT0 < 0 {
 						idT0 *= -1
