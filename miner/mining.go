@@ -4,6 +4,7 @@ package miner
 
 import (
 	"math"
+	stdlibtime "time"
 
 	"github.com/ice-blockchain/freezer/model"
 	"github.com/ice-blockchain/freezer/tokenomics"
@@ -38,11 +39,25 @@ func mine(now *time.Time, usr *user, t0Ref, tMinus1Ref *referral) (updatedUser *
 
 		return nil, false, IDT0Changed, 0, 0
 	}
+
+	var miningSessionRatio float64
+	var miningPeriod stdlibtime.Duration
+	if cfg.Development {
+		miningPeriod = 1 * stdlibtime.Minute
+		miningSessionRatio = 1
+	} else {
+		miningPeriod = 1 * stdlibtime.Hour
+		miningSessionRatio = 24.
+	}
 	if updatedUser.MiningSessionSoloEndedAt.Before(*now.Time) && (updatedUser.reachedSlashingFloor() || updatedUser.slashingDisabled()) {
 		shouldGenerateHistory = (updatedUser.BalanceLastUpdatedAt.Year() != now.Year() ||
 			updatedUser.BalanceLastUpdatedAt.YearDay() != now.YearDay() ||
 			(cfg.Development && updatedUser.BalanceLastUpdatedAt.Minute() != now.Minute())) &&
-			now.Sub(*updatedUser.BalanceLastUpdatedAt.Time) < cfg.MiningSessionDuration.Min*3
+			((updatedUser.slashingDisabled() && updatedUser.BalanceLastUpdatedAt.After(*updatedUser.MiningSessionSoloEndedAt.Time) &&
+				updatedUser.BalanceLastUpdatedAt.Sub(*updatedUser.MiningSessionSoloEndedAt.Time) < cfg.MiningSessionDuration.Min) ||
+				(updatedUser.reachedSlashingFloor() &&
+					now.Sub(*updatedUser.MiningSessionSoloEndedAt.Time) < stdlibtime.Duration((cfg.SlashingDaysCount+1)*int64(miningSessionRatio)*int64(miningPeriod))))
+
 		if shouldGenerateHistory {
 			updatedUser.BalanceTotalSlashed = 0
 			updatedUser.BalanceTotalMinted = 0
@@ -79,14 +94,11 @@ func mine(now *time.Time, usr *user, t0Ref, tMinus1Ref *referral) (updatedUser *
 	var (
 		mintedAmount        float64
 		elapsedTimeFraction float64
-		miningSessionRatio  float64
 	)
 	if timeSpent := now.Sub(*updatedUser.BalanceLastUpdatedAt.Time); cfg.Development {
 		elapsedTimeFraction = timeSpent.Minutes()
-		miningSessionRatio = 1
 	} else {
 		elapsedTimeFraction = timeSpent.Hours()
-		miningSessionRatio = 24.
 	}
 
 	unAppliedSoloPending := updatedUser.BalanceSoloPending - updatedUser.BalanceSoloPendingApplied
