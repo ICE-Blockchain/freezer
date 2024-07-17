@@ -7,7 +7,7 @@ require (
 	github.com/alitto/pond v1.9.1
 	github.com/bsm/redislock v0.9.4
 	github.com/cenkalti/backoff/v4 v4.3.0
-	github.com/ethereum/go-ethereum v1.14.6
+	github.com/ethereum/go-ethereum v1.14.7
 	github.com/goccy/go-json v0.10.3
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/ice-blockchain/eskimo v1.371.0
@@ -22,7 +22,7 @@ require (
 	github.com/swaggo/swag v1.16.3
 	github.com/testcontainers/testcontainers-go v0.32.0
 	go.uber.org/zap v1.27.0
-	golang.org/x/exp v0.0.0-20240707233637-46b078467d37
+	golang.org/x/exp v0.0.0-20240716175740-e3f259677ff7
 )
 
 require (
@@ -47,7 +47,7 @@ require (
 	github.com/andybalholm/brotli v1.1.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bits-and-blooms/bitset v1.13.0 // indirect
-	github.com/btcsuite/btcd/btcec/v2 v2.3.3 // indirect
+	github.com/btcsuite/btcd/btcec/v2 v2.3.4 // indirect
 	github.com/bytedance/sonic v1.11.9 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/chenzhuoyu/base64x v0.0.0-20230717121745-296ad89f973d // indirect
@@ -139,7 +139,7 @@ require (
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/mmcloughlin/addchain v0.4.0 // indirect
 	github.com/moby/sys/mount v0.3.3 // indirect
-	github.com/moby/sys/mountinfo v0.7.1 // indirect
+	github.com/moby/sys/mountinfo v0.7.2 // indirect
 	github.com/moby/term v0.5.0 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
