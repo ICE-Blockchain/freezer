@@ -7,7 +7,7 @@ require (
 	github.com/alitto/pond v1.9.1
 	github.com/bsm/redislock v0.9.4
 	github.com/cenkalti/backoff/v4 v4.3.0
-	github.com/ethereum/go-ethereum v1.14.6
+	github.com/ethereum/go-ethereum v1.14.7
 	github.com/goccy/go-json v0.10.3
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/ice-blockchain/eskimo v1.371.0
@@ -22,7 +22,7 @@ require (
 	github.com/swaggo/swag v1.16.3
 	github.com/testcontainers/testcontainers-go v0.32.0
 	go.uber.org/zap v1.27.0
-	golang.org/x/exp v0.0.0-20240707233637-46b078467d37
+	golang.org/x/exp v0.0.0-20240716175740-e3f259677ff7
 )
 
 require (
@@ -47,13 +47,15 @@ require (
 	github.com/andybalholm/brotli v1.1.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bits-and-blooms/bitset v1.13.0 // indirect
-	github.com/btcsuite/btcd/btcec/v2 v2.3.3 // indirect
+	github.com/btcsuite/btcd/btcec/v2 v2.3.4 // indirect
 	github.com/bytedance/sonic v1.11.9 // indirect
+	github.com/bytedance/sonic/loader v0.1.1 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
-	github.com/chenzhuoyu/base64x v0.0.0-20230717121745-296ad89f973d // indirect
-	github.com/chenzhuoyu/iasm v0.9.1 // indirect
 	github.com/cloudflare/circl v1.3.9 // indirect
+	github.com/cloudwego/base64x v0.1.4 // indirect
+	github.com/cloudwego/iasm v0.2.0 // indirect
 	github.com/cockroachdb/errors v1.11.3 // indirect
+	github.com/cockroachdb/fifo v0.0.0-20240616162244-4768e80dfb9a // indirect
 	github.com/cockroachdb/logtags v0.0.0-20230118201751-21c54148d20b // indirect
 	github.com/cockroachdb/pebble v1.1.1 // indirect
 	github.com/cockroachdb/redact v1.1.5 // indirect
@@ -77,10 +79,10 @@ require (
 	github.com/docker/go-connections v0.5.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/ethereum/c-kzg-4844 v1.0.2 // indirect
+	github.com/ethereum/go-verkle v0.1.1-0.20240306133620-7d920df305f0 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.4 // indirect
-	github.com/gballet/go-verkle v0.1.1-0.20231130133252-5a8a683fa581 // indirect
 	github.com/georgysavva/scany/v2 v2.1.3 // indirect
 	github.com/getsentry/sentry-go v0.28.1 // indirect
 	github.com/gin-contrib/sse v0.1.0 // indirect
@@ -139,7 +141,7 @@ require (
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/mmcloughlin/addchain v0.4.0 // indirect
 	github.com/moby/sys/mount v0.3.3 // indirect
-	github.com/moby/sys/mountinfo v0.7.1 // indirect
+	github.com/moby/sys/mountinfo v0.7.2 // indirect
 	github.com/moby/term v0.5.0 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
@@ -223,13 +225,9 @@ require (
 )
 
 replace (
-	github.com/bytedance/sonic => github.com/bytedance/sonic v1.11.3
-	github.com/cockroachdb/pebble => github.com/cockroachdb/pebble v0.0.0-20230928194634-aa077af62593
+	github.com/btcsuite/btcd/btcec/v2 => github.com/btcsuite/btcd/btcec/v2 v2.3.4-0.20240701131322-c9fae1ac7cca
 	github.com/containerd/containerd => github.com/containerd/containerd v1.6.19
-	github.com/crate-crypto/go-ipa => github.com/crate-crypto/go-ipa v0.0.0-20231205143816-408dbffb2041
-	github.com/crate-crypto/go-kzg-4844 => github.com/crate-crypto/go-kzg-4844 v0.7.0
 	github.com/distribution/reference => github.com/distribution/reference v0.5.0
 	github.com/docker/docker => github.com/docker/docker v20.10.3+incompatible
-	github.com/ethereum/go-ethereum => github.com/ethereum/go-ethereum v1.13.15
 	github.com/testcontainers/testcontainers-go => github.com/testcontainers/testcontainers-go v0.15.0
 )
