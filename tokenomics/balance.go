@@ -76,7 +76,7 @@ func (r *repository) GetBalanceSummary( //nolint:lll // .
 }
 
 func (r *repository) GetBalanceHistory( //nolint:funlen,gocognit,revive,gocyclo,cyclop,revive // Better to be grouped together.
-	ctx context.Context, userID string, start, end *time.Time, _ stdlibtime.Duration, limit, offset uint64,
+	ctx context.Context, userID string, start, end *time.Time, utcOffset stdlibtime.Duration, limit, offset uint64,
 ) ([]*BalanceHistoryEntry, error) {
 	if ctx.Err() != nil {
 		return nil, errors.Wrap(ctx.Err(), "unexpected deadline")
@@ -98,7 +98,7 @@ func (r *repository) GetBalanceHistory( //nolint:funlen,gocognit,revive,gocyclo,
 		return nil, errors.Wrapf(gErr, "failed to SelectBalanceHistory for id:%v,createdAts:%#v", id, dates)
 	}
 
-	return r.processBalanceHistory(balanceHistory, factor > 0, notBeforeTime, notAfterTime), nil
+	return r.processBalanceHistory(balanceHistory, factor > 0, notBeforeTime, notAfterTime, utcOffset), nil
 }
 
 func (r *repository) calculateDates(limit, offset uint64, start, end *time.Time, factor stdlibtime.Duration) (dates []stdlibtime.Time, notBeforeTime, notAfterTime *time.Time) {
@@ -106,29 +106,23 @@ func (r *repository) calculateDates(limit, offset uint64, start, end *time.Time,
 		hoursInADay = 24
 	)
 	var calculatedLimit, mappedOffset uint64
+	var afterStartPadding, beforeStartPadding uint64
 	if r.cfg.GlobalAggregationInterval.Child == stdlibtime.Minute {
 		calculatedLimit = (limit / hoursInADay) * uint64(r.cfg.GlobalAggregationInterval.Parent/r.cfg.GlobalAggregationInterval.Child)
-	} else {
-		calculatedLimit = (limit / hoursInADay)
-	}
-	var afterStartPadding, beforeStartPadding uint64
-	if factor > 0 {
-		if r.cfg.GlobalAggregationInterval.Child == stdlibtime.Minute {
+		if factor > 0 {
 			afterStartPadding = 60 - uint64(start.Add(stdlibtime.Duration(-calculatedLimit*uint64(stdlibtime.Minute))).Minute())
 			beforeStartPadding = uint64(start.Add(stdlibtime.Duration(-calculatedLimit * uint64(stdlibtime.Minute))).Minute())
-		}
-	} else {
-		if r.cfg.GlobalAggregationInterval.Child == stdlibtime.Minute {
+		} else {
 			beforeStartPadding = uint64(start.Add(stdlibtime.Duration(-calculatedLimit*uint64(stdlibtime.Minute))).Minute()) + 1
 		}
 	}
 	mappedLimit := calculatedLimit + beforeStartPadding + afterStartPadding
 	if r.cfg.GlobalAggregationInterval.Child == stdlibtime.Minute {
 		mappedOffset = (offset / hoursInADay) * uint64(r.cfg.GlobalAggregationInterval.Parent/r.cfg.GlobalAggregationInterval.Child)
-	} else {
-		mappedOffset = (offset / hoursInADay)
 	}
 	dates = make([]stdlibtime.Time, 0, mappedLimit)
+	firstDayOfStartMonth := stdlibtime.Date(start.Year(), start.Month(), 1, 0, 0, 0, 0, stdlibtime.UTC)
+	lastDayOfEndMonth := stdlibtime.Date(end.Year(), end.Month(), int(daysInMonth(end)), 0, 0, 0, 0, stdlibtime.UTC)
 	if factor > 0 {
 		if r.cfg.GlobalAggregationInterval.Child == stdlibtime.Minute {
 			for ix := stdlibtime.Duration(mappedOffset); ix < stdlibtime.Duration(mappedLimit+mappedOffset); ix++ {
@@ -137,17 +131,10 @@ func (r *repository) calculateDates(limit, offset uint64, start, end *time.Time,
 			notBeforeTime = time.New(start.Add(stdlibtime.Duration(mappedOffset * uint64(stdlibtime.Minute))))
 			notAfterTime = time.New(start.Add(stdlibtime.Duration((calculatedLimit + mappedOffset) * uint64(stdlibtime.Minute))))
 		} else {
-			for ix := stdlibtime.Duration(mappedOffset); ix < stdlibtime.Duration(mappedLimit+mappedOffset); ix++ {
-				dates = append(dates, start.Add(-stdlibtime.Duration(beforeStartPadding)*r.cfg.GlobalAggregationInterval.Parent).Add(ix*factor*r.cfg.GlobalAggregationInterval.Parent).Truncate(r.cfg.GlobalAggregationInterval.Parent))
-			}
-			notBeforeTime = time.New(start.Truncate(r.cfg.GlobalAggregationInterval.Parent).Add(stdlibtime.Duration(mappedOffset * uint64(r.cfg.GlobalAggregationInterval.Parent))))
-			notAfterTime = time.New(start.Truncate(r.cfg.GlobalAggregationInterval.Parent).Add(stdlibtime.Duration((calculatedLimit + mappedOffset) * uint64(r.cfg.GlobalAggregationInterval.Parent))))
-		}
-		if notAfterTime.UnixNano() > end.UnixNano() {
-			if r.cfg.GlobalAggregationInterval.Child == stdlibtime.Minute {
-				notAfterTime = end
-			} else {
-				notAfterTime = time.New(end.Truncate(r.cfg.GlobalAggregationInterval.Parent))
+			notBeforeTime = start
+			notAfterTime = end
+			for ix := 0; ix <= int(lastDayOfEndMonth.Sub(firstDayOfStartMonth).Hours()/hoursInADay); ix++ {
+				dates = append(dates, firstDayOfStartMonth.Add(stdlibtime.Duration(ix)*hoursInADay*stdlibtime.Hour))
 			}
 		}
 	} else {
@@ -158,11 +145,11 @@ func (r *repository) calculateDates(limit, offset uint64, start, end *time.Time,
 			notBeforeTime = time.New(start.Add(stdlibtime.Duration((-calculatedLimit - mappedOffset) * uint64(stdlibtime.Minute))))
 			notAfterTime = time.New(start.Add(stdlibtime.Duration(-mappedOffset * uint64(stdlibtime.Minute))))
 		} else {
-			for ix := stdlibtime.Duration(mappedOffset); ix < stdlibtime.Duration(mappedLimit+mappedOffset); ix++ {
-				dates = append(dates, start.Add(ix*factor*r.cfg.GlobalAggregationInterval.Parent).Truncate(r.cfg.GlobalAggregationInterval.Parent))
+			notBeforeTime = end
+			notAfterTime = start
+			for ix := 0; ix <= int(lastDayOfEndMonth.Sub(firstDayOfStartMonth).Hours()/hoursInADay); ix++ {
+				dates = append(dates, lastDayOfEndMonth.Add(-1*stdlibtime.Duration(ix)*hoursInADay*stdlibtime.Hour))
 			}
-			notBeforeTime = time.New(start.Truncate(r.cfg.GlobalAggregationInterval.Parent).Add(stdlibtime.Duration((-calculatedLimit - mappedOffset) * uint64(r.cfg.GlobalAggregationInterval.Parent))))
-			notAfterTime = time.New(start.Truncate(r.cfg.GlobalAggregationInterval.Parent).Add(stdlibtime.Duration(-mappedOffset * uint64(r.cfg.GlobalAggregationInterval.Parent))))
 		}
 	}
 
@@ -173,7 +160,9 @@ func (r *repository) processBalanceHistory(
 	res []*dwh.BalanceHistory,
 	startDateIsBeforeEndDate bool,
 	notBeforeTime, notAfterTime *time.Time,
+	utcOffset stdlibtime.Duration,
 ) []*BalanceHistoryEntry { //nolint:funlen,gocognit,revive // .
+	location := stdlibtime.FixedZone(utcOffset.String(), int(utcOffset.Seconds()))
 	childDateLayout := r.cfg.globalAggregationIntervalChildDateFormat()
 	parentDateLayout := r.cfg.globalAggregationIntervalParentDateFormat()
 	type parentType struct {
@@ -189,7 +178,7 @@ func (r *repository) processBalanceHistory(
 			log.Panic(pErr) //nolint:revive // Intended.
 			parents[parentFormat] = &parentType{
 				BalanceHistoryEntry: &BalanceHistoryEntry{
-					Time:    parent,
+					Time:    parent.Add(-stdlibtime.Duration(utcOffset.Seconds()) * stdlibtime.Second).In(location),
 					Balance: new(BalanceHistoryBalanceDiff),
 				},
 				children: make(map[string]*BalanceHistoryEntry, int(r.cfg.GlobalAggregationInterval.Parent/r.cfg.GlobalAggregationInterval.Child)),
@@ -198,7 +187,7 @@ func (r *repository) processBalanceHistory(
 		}
 		if _, found := parents[parentFormat].children[childFormat]; !found {
 			parents[parentFormat].children[childFormat] = &BalanceHistoryEntry{
-				Time:    *bal.CreatedAt.Time,
+				Time:    bal.CreatedAt.Add(-stdlibtime.Duration(utcOffset.Seconds()) * stdlibtime.Second).In(location),
 				Balance: new(BalanceHistoryBalanceDiff),
 			}
 		}
@@ -331,4 +320,10 @@ func ApplyPreStaking(amount, preStakingAllocation, preStakingBonus float64) (flo
 	preStakingAmount := (amount * (100 + preStakingBonus) * preStakingAllocation) / 10000
 
 	return standardAmount, preStakingAmount
+}
+
+func daysInMonth(t *time.Time) uint64 {
+	y, m, _ := t.Date()
+
+	return uint64(stdlibtime.Date(y, m+1, 0, 0, 0, 0, 0, stdlibtime.UTC).Day())
 }

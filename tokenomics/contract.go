@@ -263,15 +263,15 @@ type (
 // Private API.
 
 const (
-	applicationYamlKey                  = "tokenomics"
-	dayFormat, hourFormat, minuteFormat = "2006-01-02", "2006-01-02T15", "2006-01-02T15:04"
-	totalActiveUsersGlobalKey           = "TOTAL_ACTIVE_USERS"
-	requestingUserIDCtxValueKey         = "requestingUserIDCtxValueKey"
-	clientTypeCtxValueKey               = "clientTypeCtxValueKey"
-	userHashCodeCtxValueKey             = "userHashCodeCtxValueKey"
-	authorizationCtxValueKey            = "authorizationCtxValueKey"
-	xAccountMetadataCtxValueKey         = "xAccountMetadataCtxValueKey"
-	requestDeadline                     = 25 * stdlibtime.Second
+	applicationYamlKey                               = "tokenomics"
+	monthFormat, dayFormat, hourFormat, minuteFormat = "2006-01", "2006-01-02", "2006-01-02T15", "2006-01-02T15:04"
+	totalActiveUsersGlobalKey                        = "TOTAL_ACTIVE_USERS"
+	requestingUserIDCtxValueKey                      = "requestingUserIDCtxValueKey"
+	clientTypeCtxValueKey                            = "clientTypeCtxValueKey"
+	userHashCodeCtxValueKey                          = "userHashCodeCtxValueKey"
+	authorizationCtxValueKey                         = "authorizationCtxValueKey"
+	xAccountMetadataCtxValueKey                      = "xAccountMetadataCtxValueKey"
+	requestDeadline                                  = 25 * stdlibtime.Second
 
 	floatToStringFormatter = "%.2f"
 
