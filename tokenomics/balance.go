@@ -89,6 +89,9 @@ func (r *repository) GetBalanceHistory( //nolint:funlen,gocognit,revive,gocyclo,
 		factor = 1
 	}
 	dates, notBeforeTime, notAfterTime := r.calculateDates(limit, offset, start, end, factor)
+	if len(dates) == 0 {
+		return []*BalanceHistoryEntry{}, nil
+	}
 	id, gErr := GetOrInitInternalID(ctx, r.db, userID)
 	if gErr != nil {
 		return nil, errors.Wrapf(gErr, "failed to getOrInitInternalID for userID:%v", userID)
@@ -115,14 +118,17 @@ func (r *repository) calculateDates(limit, offset uint64, start, end *time.Time,
 		} else {
 			beforeStartPadding = uint64(start.Add(stdlibtime.Duration(-calculatedLimit*uint64(stdlibtime.Minute))).Minute()) + 1
 		}
+	} else {
+		if offset > 0 { // Hack not to load extra records from FE.
+			return nil, nil, nil
+		}
 	}
 	mappedLimit := calculatedLimit + beforeStartPadding + afterStartPadding
 	if r.cfg.GlobalAggregationInterval.Child == stdlibtime.Minute {
 		mappedOffset = (offset / hoursInADay) * uint64(r.cfg.GlobalAggregationInterval.Parent/r.cfg.GlobalAggregationInterval.Child)
 	}
 	dates = make([]stdlibtime.Time, 0, mappedLimit)
-	firstDayOfStartMonth := stdlibtime.Date(start.Year(), start.Month(), 1, 0, 0, 0, 0, stdlibtime.UTC)
-	lastDayOfEndMonth := stdlibtime.Date(end.Year(), end.Month(), int(daysInMonth(end)), 0, 0, 0, 0, stdlibtime.UTC)
+
 	if factor > 0 {
 		if r.cfg.GlobalAggregationInterval.Child == stdlibtime.Minute {
 			for ix := stdlibtime.Duration(mappedOffset); ix < stdlibtime.Duration(mappedLimit+mappedOffset); ix++ {
@@ -133,8 +139,10 @@ func (r *repository) calculateDates(limit, offset uint64, start, end *time.Time,
 		} else {
 			notBeforeTime = start
 			notAfterTime = end
-			for ix := 0; ix <= int(lastDayOfEndMonth.Sub(firstDayOfStartMonth).Hours()/hoursInADay); ix++ {
-				dates = append(dates, firstDayOfStartMonth.Add(stdlibtime.Duration(ix)*hoursInADay*stdlibtime.Hour))
+			firstDayOfEndMonth := stdlibtime.Date(end.Year(), end.Month(), 1, 0, 0, 0, 0, stdlibtime.UTC)
+			lastDayOfStartMonth := stdlibtime.Date(start.Year(), start.Month(), int(daysInMonth(start)), 0, 0, 0, 0, stdlibtime.UTC)
+			for ix := 0; ix <= int(lastDayOfStartMonth.Sub(firstDayOfEndMonth).Hours()/hoursInADay); ix++ {
+				dates = append(dates, firstDayOfEndMonth.Add(stdlibtime.Duration(ix)*hoursInADay*stdlibtime.Hour))
 			}
 		}
 	} else {
@@ -147,6 +155,8 @@ func (r *repository) calculateDates(limit, offset uint64, start, end *time.Time,
 		} else {
 			notBeforeTime = end
 			notAfterTime = start
+			firstDayOfStartMonth := stdlibtime.Date(start.Year(), start.Month(), 1, 0, 0, 0, 0, stdlibtime.UTC)
+			lastDayOfEndMonth := stdlibtime.Date(end.Year(), end.Month(), int(daysInMonth(end)), 0, 0, 0, 0, stdlibtime.UTC)
 			for ix := 0; ix <= int(lastDayOfEndMonth.Sub(firstDayOfStartMonth).Hours()/hoursInADay); ix++ {
 				dates = append(dates, lastDayOfEndMonth.Add(-1*stdlibtime.Duration(ix)*hoursInADay*stdlibtime.Hour))
 			}
@@ -221,7 +231,8 @@ func (r *repository) processBalanceHistory(
 				parents[pKey].children[cKey].setBalanceDiffBonus(prevChild.Balance.amount)
 			}
 			parents[pKey].Balance.amount += parents[pKey].children[cKey].Balance.amount
-			if time.New(parents[pKey].children[cKey].Time).UnixNano() >= notBeforeTime.UnixNano() && time.New(parents[pKey].children[cKey].Time).UnixNano() <= notAfterTime.UnixNano() {
+			if time.New(parents[pKey].children[cKey].Time).UnixNano() >= notBeforeTime.Add(-stdlibtime.Duration(utcOffset.Seconds())*stdlibtime.Second).In(location).UnixNano() &&
+				time.New(parents[pKey].children[cKey].Time).UnixNano() <= notAfterTime.Add(-stdlibtime.Duration(utcOffset.Seconds())*stdlibtime.Second).In(location).UnixNano() {
 				parents[pKey].BalanceHistoryEntry.TimeSeries = append(parents[pKey].BalanceHistoryEntry.TimeSeries, parents[pKey].children[cKey])
 				prevChild = parents[pKey].children[cKey]
 			}
