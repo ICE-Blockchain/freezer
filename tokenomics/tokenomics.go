@@ -344,7 +344,7 @@ func (c *Config) globalAggregationIntervalParentDateFormat() string {
 	case stdlibtime.Hour:
 		return hourFormat
 	case hoursInADay * stdlibtime.Hour:
-		return monthFormat
+		return dayFormat
 	default:
 		log.Panic(fmt.Sprintf("invalid interval: %v", c.GlobalAggregationInterval.Parent))
 
