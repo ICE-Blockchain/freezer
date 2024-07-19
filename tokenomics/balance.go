@@ -139,10 +139,10 @@ func (r *repository) calculateDates(limit, offset uint64, start, end *time.Time,
 		} else {
 			notBeforeTime = start
 			notAfterTime = end
-			firstDayOfEndMonth := stdlibtime.Date(end.Year(), end.Month(), 1, 0, 0, 0, 0, stdlibtime.UTC)
-			lastDayOfStartMonth := stdlibtime.Date(start.Year(), start.Month(), int(daysInMonth(start)), 0, 0, 0, 0, stdlibtime.UTC)
-			for ix := 0; ix <= int(lastDayOfStartMonth.Sub(firstDayOfEndMonth).Hours()/hoursInADay); ix++ {
-				dates = append(dates, firstDayOfEndMonth.Add(stdlibtime.Duration(ix)*hoursInADay*stdlibtime.Hour))
+			firstDayOfStartMonth := stdlibtime.Date(start.Year(), start.Month(), 1, 0, 0, 0, 0, stdlibtime.UTC)
+			lastDayOfEndMonth := stdlibtime.Date(end.Year(), end.Month(), int(daysInMonth(end)), 0, 0, 0, 0, stdlibtime.UTC)
+			for ix := 0; ix <= int(lastDayOfEndMonth.Sub(firstDayOfStartMonth).Hours()/hoursInADay); ix++ {
+				dates = append(dates, firstDayOfStartMonth.Add(stdlibtime.Duration(ix)*hoursInADay*stdlibtime.Hour))
 			}
 		}
 	} else {
@@ -155,10 +155,10 @@ func (r *repository) calculateDates(limit, offset uint64, start, end *time.Time,
 		} else {
 			notBeforeTime = end
 			notAfterTime = start
-			firstDayOfStartMonth := stdlibtime.Date(start.Year(), start.Month(), 1, 0, 0, 0, 0, stdlibtime.UTC)
-			lastDayOfEndMonth := stdlibtime.Date(end.Year(), end.Month(), int(daysInMonth(end)), 0, 0, 0, 0, stdlibtime.UTC)
-			for ix := 0; ix <= int(lastDayOfEndMonth.Sub(firstDayOfStartMonth).Hours()/hoursInADay); ix++ {
-				dates = append(dates, lastDayOfEndMonth.Add(-1*stdlibtime.Duration(ix)*hoursInADay*stdlibtime.Hour))
+			firstDayOfEndMonth := stdlibtime.Date(end.Year(), end.Month(), 1, 0, 0, 0, 0, stdlibtime.UTC)
+			lastDayOfStartMonth := stdlibtime.Date(start.Year(), start.Month(), int(daysInMonth(start)), 0, 0, 0, 0, stdlibtime.UTC)
+			for ix := 0; ix <= int(lastDayOfStartMonth.Sub(firstDayOfEndMonth).Hours()/hoursInADay); ix++ {
+				dates = append(dates, lastDayOfStartMonth.Add(-1*stdlibtime.Duration(ix)*hoursInADay*stdlibtime.Hour))
 			}
 		}
 	}

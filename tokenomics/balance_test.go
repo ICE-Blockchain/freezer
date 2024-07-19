@@ -220,7 +220,7 @@ func TestCalculateDates_Staging_Factor1(t *testing.T) {
 	assert.EqualValues(t, expected, dates)
 }
 
-func TestCalculateDates_Factor1_SeparateMonthes(t *testing.T) {
+func TestCalculateDates_FactorMinus1_SeparateMonthes(t *testing.T) {
 	t.Parallel()
 	repo := &repository{cfg: &Config{
 		GlobalAggregationInterval: struct {
@@ -236,6 +236,94 @@ func TestCalculateDates_Factor1_SeparateMonthes(t *testing.T) {
 	offset := uint64(0)
 	start := time.New(stdlibtime.Date(2024, 7, 18, 12, 52, 32, 0, stdlibtime.UTC))
 	end := time.New(stdlibtime.Date(2024, 6, 18, 12, 52, 32, 0, stdlibtime.UTC))
+	factor := stdlibtime.Duration(-1)
+
+	dates, notBeforeTime, notAfterTime := repo.calculateDates(limit, offset, start, end, factor)
+	assert.Len(t, dates, 61)
+	assert.Equal(t, end, notBeforeTime)
+	assert.Equal(t, start, notAfterTime)
+
+	expected := []stdlibtime.Time{
+		stdlibtime.Date(2024, 7, 31, 0, 0, 0, 0, stdlibtime.UTC),
+		stdlibtime.Date(2024, 7, 30, 0, 0, 0, 0, stdlibtime.UTC),
+		stdlibtime.Date(2024, 7, 29, 0, 0, 0, 0, stdlibtime.UTC),
+		stdlibtime.Date(2024, 7, 28, 0, 0, 0, 0, stdlibtime.UTC),
+		stdlibtime.Date(2024, 7, 27, 0, 0, 0, 0, stdlibtime.UTC),
+		stdlibtime.Date(2024, 7, 26, 0, 0, 0, 0, stdlibtime.UTC),
+		stdlibtime.Date(2024, 7, 25, 0, 0, 0, 0, stdlibtime.UTC),
+		stdlibtime.Date(2024, 7, 24, 0, 0, 0, 0, stdlibtime.UTC),
+		stdlibtime.Date(2024, 7, 23, 0, 0, 0, 0, stdlibtime.UTC),
+		stdlibtime.Date(2024, 7, 22, 0, 0, 0, 0, stdlibtime.UTC),
+		stdlibtime.Date(2024, 7, 21, 0, 0, 0, 0, stdlibtime.UTC),
+		stdlibtime.Date(2024, 7, 20, 0, 0, 0, 0, stdlibtime.UTC),
+		stdlibtime.Date(2024, 7, 19, 0, 0, 0, 0, stdlibtime.UTC),
+		stdlibtime.Date(2024, 7, 18, 0, 0, 0, 0, stdlibtime.UTC),
+		stdlibtime.Date(2024, 7, 17, 0, 0, 0, 0, stdlibtime.UTC),
+		stdlibtime.Date(2024, 7, 16, 0, 0, 0, 0, stdlibtime.UTC),
+		stdlibtime.Date(2024, 7, 15, 0, 0, 0, 0, stdlibtime.UTC),
+		stdlibtime.Date(2024, 7, 14, 0, 0, 0, 0, stdlibtime.UTC),
+		stdlibtime.Date(2024, 7, 13, 0, 0, 0, 0, stdlibtime.UTC),
+		stdlibtime.Date(2024, 7, 12, 0, 0, 0, 0, stdlibtime.UTC),
+		stdlibtime.Date(2024, 7, 11, 0, 0, 0, 0, stdlibtime.UTC),
+		stdlibtime.Date(2024, 7, 10, 0, 0, 0, 0, stdlibtime.UTC),
+		stdlibtime.Date(2024, 7, 9, 0, 0, 0, 0, stdlibtime.UTC),
+		stdlibtime.Date(2024, 7, 8, 0, 0, 0, 0, stdlibtime.UTC),
+		stdlibtime.Date(2024, 7, 7, 0, 0, 0, 0, stdlibtime.UTC),
+		stdlibtime.Date(2024, 7, 6, 0, 0, 0, 0, stdlibtime.UTC),
+		stdlibtime.Date(2024, 7, 5, 0, 0, 0, 0, stdlibtime.UTC),
+		stdlibtime.Date(2024, 7, 4, 0, 0, 0, 0, stdlibtime.UTC),
+		stdlibtime.Date(2024, 7, 3, 0, 0, 0, 0, stdlibtime.UTC),
+		stdlibtime.Date(2024, 7, 2, 0, 0, 0, 0, stdlibtime.UTC),
+		stdlibtime.Date(2024, 7, 1, 0, 0, 0, 0, stdlibtime.UTC),
+		stdlibtime.Date(2024, 6, 30, 0, 0, 0, 0, stdlibtime.UTC),
+		stdlibtime.Date(2024, 6, 29, 0, 0, 0, 0, stdlibtime.UTC),
+		stdlibtime.Date(2024, 6, 28, 0, 0, 0, 0, stdlibtime.UTC),
+		stdlibtime.Date(2024, 6, 27, 0, 0, 0, 0, stdlibtime.UTC),
+		stdlibtime.Date(2024, 6, 26, 0, 0, 0, 0, stdlibtime.UTC),
+		stdlibtime.Date(2024, 6, 25, 0, 0, 0, 0, stdlibtime.UTC),
+		stdlibtime.Date(2024, 6, 24, 0, 0, 0, 0, stdlibtime.UTC),
+		stdlibtime.Date(2024, 6, 23, 0, 0, 0, 0, stdlibtime.UTC),
+		stdlibtime.Date(2024, 6, 22, 0, 0, 0, 0, stdlibtime.UTC),
+		stdlibtime.Date(2024, 6, 21, 0, 0, 0, 0, stdlibtime.UTC),
+		stdlibtime.Date(2024, 6, 20, 0, 0, 0, 0, stdlibtime.UTC),
+		stdlibtime.Date(2024, 6, 19, 0, 0, 0, 0, stdlibtime.UTC),
+		stdlibtime.Date(2024, 6, 18, 0, 0, 0, 0, stdlibtime.UTC),
+		stdlibtime.Date(2024, 6, 17, 0, 0, 0, 0, stdlibtime.UTC),
+		stdlibtime.Date(2024, 6, 16, 0, 0, 0, 0, stdlibtime.UTC),
+		stdlibtime.Date(2024, 6, 15, 0, 0, 0, 0, stdlibtime.UTC),
+		stdlibtime.Date(2024, 6, 14, 0, 0, 0, 0, stdlibtime.UTC),
+		stdlibtime.Date(2024, 6, 13, 0, 0, 0, 0, stdlibtime.UTC),
+		stdlibtime.Date(2024, 6, 12, 0, 0, 0, 0, stdlibtime.UTC),
+		stdlibtime.Date(2024, 6, 11, 0, 0, 0, 0, stdlibtime.UTC),
+		stdlibtime.Date(2024, 6, 10, 0, 0, 0, 0, stdlibtime.UTC),
+		stdlibtime.Date(2024, 6, 9, 0, 0, 0, 0, stdlibtime.UTC),
+		stdlibtime.Date(2024, 6, 8, 0, 0, 0, 0, stdlibtime.UTC),
+		stdlibtime.Date(2024, 6, 7, 0, 0, 0, 0, stdlibtime.UTC),
+		stdlibtime.Date(2024, 6, 6, 0, 0, 0, 0, stdlibtime.UTC),
+		stdlibtime.Date(2024, 6, 5, 0, 0, 0, 0, stdlibtime.UTC),
+		stdlibtime.Date(2024, 6, 4, 0, 0, 0, 0, stdlibtime.UTC),
+		stdlibtime.Date(2024, 6, 3, 0, 0, 0, 0, stdlibtime.UTC),
+		stdlibtime.Date(2024, 6, 2, 0, 0, 0, 0, stdlibtime.UTC),
+		stdlibtime.Date(2024, 6, 1, 0, 0, 0, 0, stdlibtime.UTC),
+	}
+	assert.EqualValues(t, expected, dates)
+}
+
+func TestCalculateDates_Factor1_SeparateMonthes(t *testing.T) {
+	t.Parallel()
+	repo := &repository{cfg: &Config{
+		GlobalAggregationInterval: struct {
+			Parent stdlibtime.Duration `yaml:"parent"`
+			Child  stdlibtime.Duration `yaml:"child"`
+		}{
+			Parent: 24 * stdlibtime.Hour,
+			Child:  stdlibtime.Hour,
+		},
+	}}
+	limit := uint64(24)
+	offset := uint64(0)
+	start := time.New(stdlibtime.Date(2024, 6, 18, 12, 52, 32, 0, stdlibtime.UTC))
+	end := time.New(stdlibtime.Date(2024, 7, 18, 12, 52, 32, 0, stdlibtime.UTC))
 	factor := stdlibtime.Duration(1)
 
 	dates, notBeforeTime, notAfterTime := repo.calculateDates(limit, offset, start, end, factor)
