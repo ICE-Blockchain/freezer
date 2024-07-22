@@ -14,7 +14,7 @@ import (
 )
 
 func TestLoadBalanceKYCUsers(t *testing.T) {
-	now := time.Now()
+	now := time.New(stdlibtime.Date(2024, 7, 16, 15, 00, 00, 0, stdlibtime.UTC))
 	startDate := time.New(now.Add(-1 * stdlibtime.Minute))
 	duration := 10 * stdlibtime.Minute
 	miningDuration := 1 * stdlibtime.Minute
