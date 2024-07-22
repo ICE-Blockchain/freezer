@@ -1,17 +1,21 @@
 -- SPDX-License-Identifier: ice License 1.0
-WITH
+WITH req_dates AS (
+        SELECT req_date FROM VALUES('req_date DateTime',('%[4]v'))
+    ),
     active_users AS (
-        SELECT DISTINCT ON (id, created_at)
-            created_at, id, id_t0, id_tminus1, pre_staking_allocation, pre_staking_bonus, balance_solo, balance_solo_ethereum, balance_t0, balance_t0_ethereum, balance_for_t0, balance_t1_ethereum
-        FROM %[1]v
-        WHERE created_at IN [ '%[2]v' ]
-          AND kyc_step_passed >= %[3]v
-          AND (kyc_step_blocked = 0 OR kyc_step_blocked >= %[3]v + 1)
+        SELECT 
+            req_date AS created_at,
+            id, id_t0,  id_tminus1,  pre_staking_allocation,  pre_staking_bonus,  balance_solo,  balance_solo_ethereum,  balance_t0,  balance_t0_ethereum,  balance_for_t0, balance_t1_ethereum
+        FROM (
+            SELECT DISTINCT ON (id, created_at)
+                created_at, id, id_t0, id_tminus1, pre_staking_allocation, pre_staking_bonus, balance_solo, balance_solo_ethereum, balance_t0, balance_t0_ethereum, balance_for_t0, balance_t1_ethereum
+            FROM %[1]v
+            WHERE created_at >= '%[2]v' AND created_at < '%[6]v'
+            AND kyc_step_passed >= %[3]v
+            AND (kyc_step_blocked = 0 OR kyc_step_blocked >= %[3]v + 1)
+        ) t, req_dates
     ),
     valid_users_stopped_processing AS (
-        WITH req_dates AS (
-            SELECT req_date FROM VALUES('req_date DateTime',('%[4]v'))
-        )
         SELECT req_date AS created_at,
                id, id_t0, id_tminus1, pre_staking_allocation, pre_staking_bonus, balance_solo, balance_solo_ethereum, balance_t0, balance_t0_ethereum, balance_for_t0, balance_t1_ethereum
         FROM (SELECT DISTINCT ON (id, created_at)

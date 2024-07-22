@@ -119,7 +119,7 @@ func (db *db) Insert(ctx context.Context, columns *Columns, input InsertMetadata
 	now := time.Now()
 	truncateDuration := stdlibtime.Minute
 	if !db.cfg.Development {
-		truncateDuration = stdlibtime.Hour
+		truncateDuration = 24 * stdlibtime.Hour
 	}
 
 	for _, usr := range usrs {
@@ -570,20 +570,19 @@ func (db *db) SelectBalanceHistory(ctx context.Context, id int64, createdAts []s
 	return res, nil
 }
 
-func (db *db) SelectTotalCoins(ctx context.Context, createdAts []stdlibtime.Time) ([]*TotalCoins, error) {
+func (db *db) SelectTotalCoins(ctx context.Context, createdAtTime stdlibtime.Time, parentInverval stdlibtime.Duration) ([]*TotalCoins, error) {
 	var (
-		createdAt              = proto.ColDateTime{Data: make([]proto.DateTime, 0, len(createdAts)), Location: stdlibtime.UTC}
-		balanceTotalStandard   = make(proto.ColFloat64, 0, len(createdAts))
-		balanceTotalPreStaking = make(proto.ColFloat64, 0, len(createdAts))
-		balanceTotalEthereum   = make(proto.ColFloat64, 0, len(createdAts))
-		res                    = make([]*TotalCoins, 0, len(createdAts))
+		createdAt              = proto.ColDateTime{Data: make([]proto.DateTime, 0, 1), Location: stdlibtime.UTC}
+		balanceTotalStandard   = make(proto.ColFloat64, 0, 1)
+		balanceTotalPreStaking = make(proto.ColFloat64, 0, 1)
+		balanceTotalEthereum   = make(proto.ColFloat64, 0, 1)
+		res                    = make([]*TotalCoins, 0, 1)
 	)
-	createdAtArray := make([]string, 0, len(createdAts))
-	for _, date := range createdAts {
-		format := date.UTC().Format(stdlibtime.RFC3339)
-		createdAtArray = append(createdAtArray, format[0:len(format)-1])
-	}
-	sql := fmt.Sprintf(selectTotalCoinsSQL, tableName, strings.Join(createdAtArray, "','"), users.NoneKYCStep, strings.Join(createdAtArray, "'), ('"), createdAtArray[0])
+	formatCreatedAt := createdAtTime.UTC().Format(stdlibtime.RFC3339)
+	createdAtDate := formatCreatedAt[0 : len(formatCreatedAt)-1]
+	formatNotAfter := createdAtTime.UTC().Add(parentInverval).Format(stdlibtime.RFC3339)
+	notAfterDate := formatNotAfter[0 : len(formatNotAfter)-1]
+	sql := fmt.Sprintf(selectTotalCoinsSQL, tableName, createdAtDate, users.NoneKYCStep, createdAtDate, createdAtDate, notAfterDate)
 	if err := db.pools[atomic.AddUint64(&db.currentIndex, 1)%uint64(len(db.pools))].Do(ctx, ch.Query{
 		Body: sql,
 		Result: append(make(proto.Results, 0, 4),
@@ -615,29 +614,6 @@ func (db *db) SelectTotalCoins(ctx context.Context, createdAts []stdlibtime.Time
 	}); err != nil {
 		return nil, err
 	}
-	dedupedRes := make([]*TotalCoins, 0, len(createdAts))
-
-	for _, cAt := range createdAts {
-		var found *TotalCoins = nil
-		for _, rowA := range res {
-			if rowA.CreatedAt.Equal(cAt) {
-				found = rowA
-				break
-			}
-		}
-		if found != nil {
-			dedupedRes = append(dedupedRes, found)
-		} else {
-			dedupedRes = append(dedupedRes, &TotalCoins{
-				CreatedAt:              time.New(cAt),
-				BalanceTotalStandard:   0,
-				BalanceTotalPreStaking: 0,
-				BalanceTotalEthereum:   0,
-				BalanceTotal:           0,
-			})
-		}
-	}
-	res = dedupedRes
 
 	return res, nil
 }
