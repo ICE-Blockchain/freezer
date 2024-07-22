@@ -252,15 +252,15 @@ func (r *repository) keepTotalCoinsCacheUpdated(ctx context.Context) {
 	}
 }
 
-func (r *repository) buildTotalCoinCache(ctx context.Context, dates ...stdlibtime.Time) error {
-	totalCoins, err := r.dwh.SelectTotalCoins(ctx, dates)
+func (r *repository) buildTotalCoinCache(ctx context.Context, date stdlibtime.Time) error {
+	totalCoins, err := r.dwh.SelectTotalCoins(ctx, date, r.cfg.GlobalAggregationInterval.Parent)
 	if err != nil {
-		return errors.Wrapf(err, "failed to read total coin stats cacheable values for dates %#v", dates)
+		return errors.Wrapf(err, "failed to read total coin stats cacheable values for date %#v", date)
 	}
 
 	return errors.Wrapf(
 		r.cacheTotalCoins(ctx, totalCoins),
-		"failed to save total coin stats cache for dates %#v", dates)
+		"failed to save total coin stats cache for date %#v", date)
 }
 
 func (r *repository) mustInitTotalCoinsCache(ctx context.Context, now *time.Time) {

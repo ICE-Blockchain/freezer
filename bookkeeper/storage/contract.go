@@ -24,7 +24,7 @@ type (
 		Ping(ctx context.Context) error
 		Insert(ctx context.Context, columns *Columns, input InsertMetadata, usrs []*model.User) error
 		SelectBalanceHistory(ctx context.Context, id int64, createdAts []stdlibtime.Time) ([]*BalanceHistory, error)
-		SelectTotalCoins(ctx context.Context, createdAts []stdlibtime.Time) ([]*TotalCoins, error)
+		SelectTotalCoins(ctx context.Context, createdAtTime stdlibtime.Time, parentInverval stdlibtime.Duration) ([]*TotalCoins, error)
 		DeleteUserInfo(ctx context.Context, id int64) error
 	}
 	BalanceHistory struct {
