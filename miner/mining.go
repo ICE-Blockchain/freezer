@@ -123,6 +123,7 @@ func mine(now *time.Time, usr *user, t0Ref, tMinus1Ref *referral) (updatedUser *
 	}
 
 	baseMiningRate := updatedUser.baseMiningRate(now)
+	maxT1Referrals := (*cfg.miningBoostLevels.Load())[len(*cfg.miningBoostLevels.Load())-1].MaxT1Referrals
 	if updatedUser.MiningSessionSoloEndedAt.After(*now.Time) {
 		if !updatedUser.ExtraBonusStartedAt.IsNil() && now.Before(updatedUser.ExtraBonusStartedAt.Add(cfg.ExtraBonuses.Duration)) {
 			rate := (100 + float64(updatedUser.ExtraBonus)) * baseMiningRate * elapsedTimeFraction / 100.
@@ -158,7 +159,7 @@ func mine(now *time.Time, usr *user, t0Ref, tMinus1Ref *referral) (updatedUser *
 		}
 		activeT1Referrals := int32(0)
 		if updatedUser.MiningBoostLevelIndex != nil {
-			if updatedUser.IsVerified() && updatedUser.VerifiedT1Referrals >= 25 {
+			if updatedUser.IsVerified() && updatedUser.VerifiedT1Referrals >= maxT1Referrals {
 				activeT1Referrals = int32((*cfg.miningBoostLevels.Load())[int(*updatedUser.MiningBoostLevelIndex)].MaxT1Referrals)
 			} else {
 				activeT1Referrals = int32(math.Min(float64((*cfg.miningBoostLevels.Load())[int(*updatedUser.MiningBoostLevelIndex)].MaxT1Referrals), float64(updatedUser.ActiveT1Referrals)))
@@ -198,13 +199,13 @@ func mine(now *time.Time, usr *user, t0Ref, tMinus1Ref *referral) (updatedUser *
 		}
 	}
 
-	if updatedUser.BalanceT1WelcomeBonusPendingApplied < 25*tokenomics.WelcomeBonusV2Amount {
+	if updatedUser.BalanceT1WelcomeBonusPendingApplied < float64(maxT1Referrals)*tokenomics.WelcomeBonusV2Amount {
 		if unAppliedT1WelcomeBonusPending := updatedUser.BalanceT1WelcomeBonusPending - updatedUser.BalanceT1WelcomeBonusPendingApplied; unAppliedT1WelcomeBonusPending == 0 {
 			updatedUser.BalanceT1WelcomeBonusPending = 0
 			updatedUser.BalanceT1WelcomeBonusPendingApplied = 0
 		} else {
-			unAppliedT1Pending += min(unAppliedT1WelcomeBonusPending, 25*tokenomics.WelcomeBonusV2Amount-updatedUser.BalanceT1WelcomeBonusPendingApplied)
-			updatedUser.BalanceT1WelcomeBonusPendingApplied = min(updatedUser.BalanceT1WelcomeBonusPending, 25*tokenomics.WelcomeBonusV2Amount)
+			unAppliedT1Pending += min(unAppliedT1WelcomeBonusPending, float64(maxT1Referrals)*tokenomics.WelcomeBonusV2Amount-updatedUser.BalanceT1WelcomeBonusPendingApplied)
+			updatedUser.BalanceT1WelcomeBonusPendingApplied = min(updatedUser.BalanceT1WelcomeBonusPending, float64(maxT1Referrals)*tokenomics.WelcomeBonusV2Amount)
 		}
 	} else {
 		updatedUser.BalanceT1WelcomeBonusPending = 0

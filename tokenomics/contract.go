@@ -83,9 +83,9 @@ type (
 	MiningBoostLevel struct {
 		ICEPrice                   string  `json:"icePrice" example:"1234.1234" mapstructure:"-"`
 		icePrice                   float64 `json:"-" example:"1234.1234" mapstructure:"-"`
+		MaxT1Referrals             uint64  `json:"maxT1Referrals" example:"5" mapstructure:"maxT1Referrals"`
 		MiningSessionLengthSeconds uint32  `json:"miningSessionLengthSeconds" example:"86400" mapstructure:"miningSessionLengthSeconds"`
 		MiningRateBonus            uint16  `json:"miningRateBonus" example:"100" mapstructure:"miningRateBonus"`
-		MaxT1Referrals             uint8   `json:"maxT1Referrals" example:"5" mapstructure:"maxT1Referrals"`
 		SlashingDisabled           bool    `json:"slashingDisabled" example:"false" mapstructure:"slashingDisabled"`
 	}
 	MiningBoostSummary struct {

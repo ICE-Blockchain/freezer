@@ -222,7 +222,7 @@ func (r *repository) GetMiningSummary(ctx context.Context, userID string) (*Mini
 	maxMiningSessionDuration := r.cfg.maxMiningSessionDuration(ms[0].MiningBoostLevelIndexField)
 	activeT1Referrals := int32(0)
 	if ms[0].MiningBoostLevelIndex != nil {
-		if ms[0].IsVerified() && ms[0].VerifiedT1Referrals >= 25 {
+		if ms[0].IsVerified() && ms[0].VerifiedT1Referrals >= (*r.cfg.MiningBoost.levels.Load())[len(*r.cfg.MiningBoost.levels.Load())-1].MaxT1Referrals {
 			activeT1Referrals = int32((*r.cfg.MiningBoost.levels.Load())[int(*ms[0].MiningBoostLevelIndex)].MaxT1Referrals)
 		} else {
 			activeT1Referrals = int32(math.Min(float64((*r.cfg.MiningBoost.levels.Load())[int(*ms[0].MiningBoostLevelIndex)].MaxT1Referrals), float64(ms[0].ActiveT1Referrals)))
