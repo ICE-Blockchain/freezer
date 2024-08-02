@@ -51,6 +51,7 @@ type (
 		model.IDTMinus1Field
 		model.PreStakingAllocationField
 		model.PreStakingBonusField
+		model.BalanceT1WelcomeBonusPendingField
 	}
 )
 
