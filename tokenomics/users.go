@@ -319,6 +319,9 @@ func (r *repository) updateReferredBy(ctx context.Context, id int64, oldIDT0, ol
 			if innerErr := pipeliner.HIncrBy(ctx, model.SerializedUsersKey(localIDT0), "balance_t1_welcome_bonus_pending", WelcomeBonusV2Amount).Err(); innerErr != nil {
 				return innerErr
 			}
+			if innerErr := pipeliner.HIncrBy(ctx, model.SerializedUsersKey(localIDT0), "total_t1_referrals", 1).Err(); innerErr != nil {
+				return innerErr
+			}
 
 			return pipeliner.HSet(ctx, newPartialState.Key(), storage.SerializeValue(newPartialState)...).Err()
 		})

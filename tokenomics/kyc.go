@@ -530,6 +530,8 @@ func (r *repository) overrideKYCStateWithEskimoKYCState(ctx context.Context, use
 			model.VerifiedT1ReferralsField
 			model.DeserializedUsersKey
 			model.HideRankingField
+			model.TotalT1ReferralsField
+			model.BalanceT1WelcomeBonusPendingField
 			KycFaceAvailable bool `json:"kycFaceAvailable" redis:"-"`
 		}
 		if err3 := json.Unmarshal(data, &usr); err3 != nil {
@@ -540,7 +542,11 @@ func (r *repository) overrideKYCStateWithEskimoKYCState(ctx context.Context, use
 			usr.HideRanking = buildHideRanking(usr.HiddenProfileElements)
 			usr.CreatedAt = time.New(usr.AccountCreatedAt)
 			usr.ProfilePictureName = r.pictureClient.StripDownloadURL(usr.ProfilePictureName)
-
+			// We cant reset it to proper value in miner cuz we have active users who has zero total refs in state
+			// until they start next mining, we'll lose pending value in such case.
+			if state.BalanceT1WelcomeBonusPending > float64(usr.TotalT1Referrals)*WelcomeBonusV2Amount {
+				usr.BalanceT1WelcomeBonusPending = float64(usr.TotalT1Referrals) * WelcomeBonusV2Amount
+			}
 			return usr.KycFaceAvailable, multierror.Append(
 				errors.Wrapf(r.updateUsernameKeywords(ctx, state.ID, state.Username, usr.Username), "failed to updateUsernameKeywords for oldUser:%#v, user:%#v", state, usr),                         //nolint:lll // .
 				errors.Wrapf(r.updateReferredBy(ctx, state.ID, &state.IDT0, &state.IDTMinus1, state.UserID, usr.ReferredBy, state.BalanceForTMinus1), "failed to updateReferredBy for user:%#v", usr), //nolint:lll // .

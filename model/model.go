@@ -316,6 +316,12 @@ type (
 	ActiveT2ReferralsField struct {
 		ActiveT2Referrals int32 `redis:"active_t2_referrals,omitempty"`
 	}
+	TotalT1ReferralsField struct {
+		TotalT1Referrals int32 `json:"t1ReferralCount,omitempty" redis:"total_t1_referrals,omitempty"`
+	}
+	TotalT2ReferralsField struct {
+		TotalT2Referrals int32 `json:"t2ReferralCount,omitempty" redis:"total_t2_referrals,omitempty"`
+	}
 	NewsSeenField struct {
 		NewsSeen uint16 `redis:"news_seen"`
 	}
