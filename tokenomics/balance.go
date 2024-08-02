@@ -15,6 +15,7 @@ import (
 
 	dwh "github.com/ice-blockchain/freezer/bookkeeper/storage"
 	"github.com/ice-blockchain/freezer/model"
+	"github.com/ice-blockchain/santa/tasks"
 	messagebroker "github.com/ice-blockchain/wintr/connectors/message_broker"
 	"github.com/ice-blockchain/wintr/connectors/storage/v3"
 	"github.com/ice-blockchain/wintr/log"
@@ -278,12 +279,12 @@ func (s *completedTasksSource) Process(ctx context.Context, message *messagebrok
 	if ctx.Err() != nil || len(message.Value) == 0 {
 		return errors.Wrap(ctx.Err(), "unexpected deadline while processing message")
 	}
-	const requiredCompletedTasks, adoptionMultiplicationFactor = 6, 168
 	var val struct {
 		UserID         string `json:"userId" example:"edfd8c02-75e0-4687-9ac2-1ce4723865c4"`
+		Type           string `json:"type" example:"claim_username"`
 		CompletedTasks uint64 `json:"completedTasks,omitempty" example:"3"`
 	}
-	if err = json.UnmarshalContext(ctx, message.Value, &val); err != nil || val.UserID == "" || val.CompletedTasks != requiredCompletedTasks {
+	if err = json.UnmarshalContext(ctx, message.Value, &val); err != nil || val.UserID == "" {
 		return errors.Wrapf(err, "process: cannot unmarshall %v into %#v", string(message.Value), &val)
 	}
 	duplGuardKey := fmt.Sprintf("completed_tasks_ice_prize_dupl_guards:%v", val.UserID)
@@ -319,7 +320,10 @@ func (s *completedTasksSource) Process(ctx context.Context, message *messagebrok
 
 		return errors.Wrapf(err, "failed to get GetAdoptionSummary for id:%v", id)
 	}
-	prize := s.cfg.BaseMiningRate(time.Now(), res[0].CreatedAt) * adoptionMultiplicationFactor
+	if _, ok := tasks.TaskPrize[tasks.Type(val.Type)]; !ok {
+		return errors.Wrapf(err, "no task prize for:%v", val.Type)
+	}
+	prize := tasks.TaskPrize[tasks.Type(val.Type)]
 
 	return errors.Wrapf(s.db.HIncrByFloat(ctx, model.SerializedUsersKey(id), "balance_solo_pending", prize).Err(),
 		"failed to incr balance_solo_pending for userID:%v by %v", val.UserID, prize)
