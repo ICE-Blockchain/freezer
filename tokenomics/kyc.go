@@ -544,8 +544,8 @@ func (r *repository) overrideKYCStateWithEskimoKYCState(ctx context.Context, use
 			usr.ProfilePictureName = r.pictureClient.StripDownloadURL(usr.ProfilePictureName)
 			// We cant reset it to proper value in miner cuz we have active users who has zero total refs in state
 			// until they start next mining, we'll lose pending value in such case.
-			if state.BalanceT1WelcomeBonusPending > float64(usr.TotalT1Referrals)*WelcomeBonusV2Amount {
-				usr.BalanceT1WelcomeBonusPending = float64(usr.TotalT1Referrals) * WelcomeBonusV2Amount
+			if state.BalanceT1WelcomeBonusPending > float64(usr.TotalT1Referrals)*r.cfg.WelcomeBonusV2Amount {
+				usr.BalanceT1WelcomeBonusPending = float64(usr.TotalT1Referrals) * r.cfg.WelcomeBonusV2Amount
 			}
 			return usr.KycFaceAvailable, multierror.Append(
 				errors.Wrapf(r.updateUsernameKeywords(ctx, state.ID, state.Username, usr.Username), "failed to updateUsernameKeywords for oldUser:%#v, user:%#v", state, usr),                         //nolint:lll // .

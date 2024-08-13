@@ -30,10 +30,6 @@ const (
 )
 
 const (
-	WelcomeBonusV2Amount = 500.0
-)
-
-const (
 	PositiveMiningRateType MiningRateType = "positive"
 	NegativeMiningRateType MiningRateType = "negative"
 	NoneMiningRateType     MiningRateType = "none"
@@ -435,9 +431,10 @@ type (
 			T1 uint32 `yaml:"t1"`
 			T2 uint32 `yaml:"t2"`
 		} `yaml:"referralBonusMiningRates"`
-		Tenant              string  `yaml:"tenant"`
-		DefaultReferralName string  `yaml:"defaultReferralName"`
-		SlashingFloor       float64 `yaml:"slashingFloor" mapstructure:"slashingFloor"`
+		Tenant               string  `yaml:"tenant"`
+		DefaultReferralName  string  `yaml:"defaultReferralName"`
+		SlashingFloor        float64 `yaml:"slashingFloor" mapstructure:"slashingFloor"`
+		WelcomeBonusV2Amount float64 `yaml:"welcomeBonusV2Amount" mapstructure:"welcomeBonusV2Amount"`
 	}
 )
 
