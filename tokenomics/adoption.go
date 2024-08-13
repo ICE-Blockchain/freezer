@@ -28,7 +28,7 @@ func (r *repository) GetAdoptionSummary(ctx context.Context, userID string) (as 
 		return nil, errors.Wrap(err, "failed to get current totalActiveUsers")
 	}
 	as.Milestones = make([]*Adoption[string], 0, r.cfg.Adoption.Milestones)
-	id, err := r.getOrInitInternalID(ctx, r.db, userID)
+	id, err := GetOrInitInternalID(ctx, r.db, userID, r.cfg.WelcomeBonusV2Amount)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to getOrInitInternalID for userID:%v", userID)
 	}

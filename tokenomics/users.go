@@ -48,7 +48,7 @@ func (s *usersTableSource) Process(ctx context.Context, msg *messagebroker.Messa
 }
 
 func (s *usersTableSource) deleteUser(ctx context.Context, usr *users.User) error { //nolint:funlen // .
-	id, err := s.getOrInitInternalID(ctx, s.db, usr.ID)
+	id, err := GetOrInitInternalID(ctx, s.db, usr.ID, s.cfg.WelcomeBonusV2Amount)
 	if err != nil {
 		return errors.Wrapf(err, "failed to getInternalID for user:%#v", usr)
 	}
@@ -155,7 +155,7 @@ func (s *usersTableSource) deleteUser(ctx context.Context, usr *users.User) erro
 }
 
 func (s *usersTableSource) replaceUser(ctx context.Context, usr *users.User) error { //nolint:funlen // .
-	internalID, err := s.getOrInitInternalID(ctx, s.db, usr.ID)
+	internalID, err := GetOrInitInternalID(ctx, s.db, usr.ID, s.cfg.WelcomeBonusV2Amount)
 	if err != nil {
 		return errors.Wrapf(err, "failed to getOrInitInternalID for user:%#v", usr)
 	}
@@ -245,7 +245,7 @@ func (r *repository) updateReferredBy(ctx context.Context, id int64, oldIDT0, ol
 		referredBy == "icenetwork" {
 		return nil
 	}
-	idT0, err := r.getOrInitInternalID(ctx, r.db, referredBy)
+	idT0, err := GetOrInitInternalID(ctx, r.db, referredBy, r.cfg.WelcomeBonusV2Amount)
 	if err != nil {
 		return errors.Wrapf(err, "failed to getOrInitInternalID for referredBy:%v", referredBy)
 	} else if (*oldIDT0 == idT0) || (*oldIDT0*-1 == idT0) {
@@ -456,7 +456,7 @@ redis.call('HSETNX', KEYS[1], 'user_id', ARGV[1])
 `)
 )
 
-func (r *repository) getOrInitInternalID(ctx context.Context, db storage.DB, userID string) (int64, error) {
+func GetOrInitInternalID(ctx context.Context, db storage.DB, userID string, welcomeBonus float64) (int64, error) {
 	if ctx.Err() != nil {
 		return 0, errors.Wrapf(ctx.Err(), "context expired")
 	}
@@ -467,12 +467,12 @@ func (r *repository) getOrInitInternalID(ctx context.Context, db storage.DB, use
 		if err != nil && redis.HasErrorPrefix(err, "NOSCRIPT") {
 			log.Error(errors.Wrap(initInternalIDScript.Load(ctx, db).Err(), "failed to load initInternalIDScript"))
 
-			return r.getOrInitInternalID(ctx, db, userID)
+			return GetOrInitInternalID(ctx, db, userID, welcomeBonus)
 		}
 		if err == nil {
 			accessibleKeys = append(make([]string, 0, 1), model.SerializedUsersKey(id))
 			for err = errors.New("init"); ctx.Err() == nil && err != nil; {
-				if err = initUserScript.EvalSha(ctx, db, accessibleKeys, userID, strconv.FormatFloat(r.cfg.WelcomeBonusV2Amount, 'f', 1, 64)).Err(); err == nil || errors.Is(err, redis.Nil) || strings.Contains(err.Error(), "race condition") {
+				if err = initUserScript.EvalSha(ctx, db, accessibleKeys, userID, strconv.FormatFloat(welcomeBonus, 'f', 1, 64)).Err(); err == nil || errors.Is(err, redis.Nil) || strings.Contains(err.Error(), "race condition") {
 					if err != nil && strings.Contains(err.Error(), "race condition") {
 						log.Error(errors.Wrapf(err, "[2]race condition while evaling initUserScript for userID:%v", userID))
 					}
@@ -489,7 +489,7 @@ func (r *repository) getOrInitInternalID(ctx context.Context, db storage.DB, use
 		log.Error(err)
 		stdlibtime.Sleep(2 * stdlibtime.Second)
 
-		return r.getOrInitInternalID(ctx, db, userID)
+		return GetOrInitInternalID(ctx, db, userID, welcomeBonus)
 	}
 
 	return id, errors.Wrapf(err, "failed to getInternalID for userID:%#v", userID)
