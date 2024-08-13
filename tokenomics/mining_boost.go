@@ -33,7 +33,7 @@ import (
 )
 
 func (r *repository) GetMiningBoostSummary(ctx context.Context, userID string) (*MiningBoostSummary, error) {
-	id, err := GetOrInitInternalID(ctx, r.db, userID)
+	id, err := GetOrInitInternalID(ctx, r.db, userID, r.cfg.WelcomeBonusV2Amount)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to getOrInitInternalID for userID:%v", userID)
 	}
@@ -76,7 +76,7 @@ func (r *repository) InitializeMiningBoostUpgrade(ctx context.Context, miningBoo
 	if miningBoostLevelIndex > uint8(len(r.cfg.MiningBoost.Levels)-1) {
 		return nil, errors.New("mining boost already at max level")
 	}
-	id, err := GetOrInitInternalID(ctx, r.db, userID)
+	id, err := GetOrInitInternalID(ctx, r.db, userID, r.cfg.WelcomeBonusV2Amount)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to getOrInitInternalID for userID:%v", userID)
 	}
@@ -124,7 +124,7 @@ func (r *repository) FinalizeMiningBoostUpgrade(ctx context.Context, network Blo
 	if network != BNBBlockchainNetworkType && network != EthereumBlockchainNetworkType && network != ArbitrumBlockchainNetworkType {
 		return nil, errors.Errorf("invalid network %v", network)
 	}
-	id, err := GetOrInitInternalID(ctx, r.db, userID)
+	id, err := GetOrInitInternalID(ctx, r.db, userID, r.cfg.WelcomeBonusV2Amount)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to getOrInitInternalID for userID:%v", userID)
 	}

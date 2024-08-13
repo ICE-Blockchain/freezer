@@ -419,7 +419,7 @@ func (m *miner) mine(ctx context.Context, workerNumber int64) {
 					if idT0 < 0 {
 						idT0 *= -1
 					}
-					balanceT1WelcomeBonusIncr[idT0] += tokenomics.WelcomeBonusV2Amount
+					balanceT1WelcomeBonusIncr[idT0] += cfg.WelcomeBonusV2Amount
 				}
 				updatedUsers = append(updatedUsers, &updatedUser.UpdatedUser)
 			} else {

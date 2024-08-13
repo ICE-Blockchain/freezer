@@ -4,7 +4,6 @@ package tokenomics
 
 import (
 	"context"
-	"fmt"
 	"strconv"
 	"strings"
 	stdlibtime "time"
@@ -49,7 +48,7 @@ func (s *usersTableSource) Process(ctx context.Context, msg *messagebroker.Messa
 }
 
 func (s *usersTableSource) deleteUser(ctx context.Context, usr *users.User) error { //nolint:funlen // .
-	id, err := GetOrInitInternalID(ctx, s.db, usr.ID)
+	id, err := GetOrInitInternalID(ctx, s.db, usr.ID, s.cfg.WelcomeBonusV2Amount)
 	if err != nil {
 		return errors.Wrapf(err, "failed to getInternalID for user:%#v", usr)
 	}
@@ -156,7 +155,7 @@ func (s *usersTableSource) deleteUser(ctx context.Context, usr *users.User) erro
 }
 
 func (s *usersTableSource) replaceUser(ctx context.Context, usr *users.User) error { //nolint:funlen // .
-	internalID, err := GetOrInitInternalID(ctx, s.db, usr.ID)
+	internalID, err := GetOrInitInternalID(ctx, s.db, usr.ID, s.cfg.WelcomeBonusV2Amount)
 	if err != nil {
 		return errors.Wrapf(err, "failed to getOrInitInternalID for user:%#v", usr)
 	}
@@ -246,7 +245,7 @@ func (r *repository) updateReferredBy(ctx context.Context, id int64, oldIDT0, ol
 		referredBy == "icenetwork" {
 		return nil
 	}
-	idT0, err := GetOrInitInternalID(ctx, r.db, referredBy)
+	idT0, err := GetOrInitInternalID(ctx, r.db, referredBy, r.cfg.WelcomeBonusV2Amount)
 	if err != nil {
 		return errors.Wrapf(err, "failed to getOrInitInternalID for referredBy:%v", referredBy)
 	} else if (*oldIDT0 == idT0) || (*oldIDT0*-1 == idT0) {
@@ -316,7 +315,7 @@ func (r *repository) updateReferredBy(ctx context.Context, id int64, oldIDT0, ol
 			localIDT0 *= -1
 		}
 		results, err4 := r.db.TxPipelined(ctx, func(pipeliner redis.Pipeliner) error {
-			if innerErr := pipeliner.HIncrBy(ctx, model.SerializedUsersKey(localIDT0), "balance_t1_welcome_bonus_pending", WelcomeBonusV2Amount).Err(); innerErr != nil {
+			if innerErr := pipeliner.HIncrBy(ctx, model.SerializedUsersKey(localIDT0), "balance_t1_welcome_bonus_pending", int64(r.cfg.WelcomeBonusV2Amount)).Err(); innerErr != nil {
 				return innerErr
 			}
 			if innerErr := pipeliner.HIncrBy(ctx, model.SerializedUsersKey(localIDT0), "total_t1_referrals", 1).Err(); innerErr != nil {
@@ -444,20 +443,20 @@ elseif set_nx_reply == 0 then
 end
 return new_id
 `)
-	initUserScript = redis.NewScript(fmt.Sprintf(`
+	initUserScript = redis.NewScript(`
 local hlen_reply = redis.call('HLEN', KEYS[1])
 if hlen_reply ~= 0 then
 	return redis.error_reply('[2]race condition')
 end
-redis.call('HSETNX', KEYS[1], 'balance_total_standard', %[1]v)
-redis.call('HSETNX', KEYS[1], 'balance_total_minted', %[1]v)
-redis.call('HSETNX', KEYS[1], 'balance_solo', %[1]v)
+redis.call('HSETNX', KEYS[1], 'balance_total_standard', ARGV[2])
+redis.call('HSETNX', KEYS[1], 'balance_total_minted', ARGV[2])
+redis.call('HSETNX', KEYS[1], 'balance_solo', ARGV[2])
 redis.call('HSETNX', KEYS[1], 'welcome_bonus_v2_applied', 'true')
 redis.call('HSETNX', KEYS[1], 'user_id', ARGV[1])
-`, strconv.FormatFloat(WelcomeBonusV2Amount, 'f', 1, 64)))
+`)
 )
 
-func GetOrInitInternalID(ctx context.Context, db storage.DB, userID string) (int64, error) {
+func GetOrInitInternalID(ctx context.Context, db storage.DB, userID string, welcomeBonus float64) (int64, error) {
 	if ctx.Err() != nil {
 		return 0, errors.Wrapf(ctx.Err(), "context expired")
 	}
@@ -468,12 +467,12 @@ func GetOrInitInternalID(ctx context.Context, db storage.DB, userID string) (int
 		if err != nil && redis.HasErrorPrefix(err, "NOSCRIPT") {
 			log.Error(errors.Wrap(initInternalIDScript.Load(ctx, db).Err(), "failed to load initInternalIDScript"))
 
-			return GetOrInitInternalID(ctx, db, userID)
+			return GetOrInitInternalID(ctx, db, userID, welcomeBonus)
 		}
 		if err == nil {
 			accessibleKeys = append(make([]string, 0, 1), model.SerializedUsersKey(id))
 			for err = errors.New("init"); ctx.Err() == nil && err != nil; {
-				if err = initUserScript.EvalSha(ctx, db, accessibleKeys, userID).Err(); err == nil || errors.Is(err, redis.Nil) || strings.Contains(err.Error(), "race condition") {
+				if err = initUserScript.EvalSha(ctx, db, accessibleKeys, userID, strconv.FormatFloat(welcomeBonus, 'f', 1, 64)).Err(); err == nil || errors.Is(err, redis.Nil) || strings.Contains(err.Error(), "race condition") {
 					if err != nil && strings.Contains(err.Error(), "race condition") {
 						log.Error(errors.Wrapf(err, "[2]race condition while evaling initUserScript for userID:%v", userID))
 					}
@@ -490,7 +489,7 @@ func GetOrInitInternalID(ctx context.Context, db storage.DB, userID string) (int
 		log.Error(err)
 		stdlibtime.Sleep(2 * stdlibtime.Second)
 
-		return GetOrInitInternalID(ctx, db, userID)
+		return GetOrInitInternalID(ctx, db, userID, welcomeBonus)
 	}
 
 	return id, errors.Wrapf(err, "failed to getInternalID for userID:%#v", userID)

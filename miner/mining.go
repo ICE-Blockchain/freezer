@@ -198,13 +198,13 @@ func mine(now *time.Time, usr *user, t0Ref, tMinus1Ref *referral) (updatedUser *
 			updatedUser.SlashingRateForTMinus1 = updatedUser.BalanceForTMinus1 / float64(cfg.SlashingDaysCount) / miningSessionRatio
 		}
 	}
-	if updatedUser.BalanceT1WelcomeBonusPendingApplied < float64(min(maxT1Referrals, uint64(usr.TotalT1Referrals)))*tokenomics.WelcomeBonusV2Amount {
+	if updatedUser.BalanceT1WelcomeBonusPendingApplied < float64(min(maxT1Referrals, uint64(usr.TotalT1Referrals)))*cfg.WelcomeBonusV2Amount {
 		if unAppliedT1WelcomeBonusPending := updatedUser.BalanceT1WelcomeBonusPending - updatedUser.BalanceT1WelcomeBonusPendingApplied; unAppliedT1WelcomeBonusPending == 0 {
 			updatedUser.BalanceT1WelcomeBonusPending = 0
 			updatedUser.BalanceT1WelcomeBonusPendingApplied = 0
 		} else {
-			unAppliedT1Pending += min(unAppliedT1WelcomeBonusPending, float64(min(maxT1Referrals, uint64(usr.TotalT1Referrals)))*tokenomics.WelcomeBonusV2Amount-updatedUser.BalanceT1WelcomeBonusPendingApplied)
-			updatedUser.BalanceT1WelcomeBonusPendingApplied = min(updatedUser.BalanceT1WelcomeBonusPending, float64(min(maxT1Referrals, uint64(usr.TotalT1Referrals)))*tokenomics.WelcomeBonusV2Amount)
+			unAppliedT1Pending += min(unAppliedT1WelcomeBonusPending, float64(min(maxT1Referrals, uint64(usr.TotalT1Referrals)))*cfg.WelcomeBonusV2Amount-updatedUser.BalanceT1WelcomeBonusPendingApplied)
+			updatedUser.BalanceT1WelcomeBonusPendingApplied = min(updatedUser.BalanceT1WelcomeBonusPending, float64(min(maxT1Referrals, uint64(usr.TotalT1Referrals)))*cfg.WelcomeBonusV2Amount)
 		}
 	} else {
 		updatedUser.BalanceT1WelcomeBonusPending = 0
@@ -267,7 +267,7 @@ func mine(now *time.Time, usr *user, t0Ref, tMinus1Ref *referral) (updatedUser *
 		slashedAmount = 0
 	}
 	if updatedUser.WelcomeBonusV2Applied == nil || !*updatedUser.WelcomeBonusV2Applied {
-		updatedUser.BalanceSolo += tokenomics.WelcomeBonusV2Amount - 10
+		updatedUser.BalanceSolo += cfg.WelcomeBonusV2Amount - 10
 		trueVal := model.FlexibleBool(true)
 		updatedUser.WelcomeBonusV2Applied = &trueVal
 	} else {

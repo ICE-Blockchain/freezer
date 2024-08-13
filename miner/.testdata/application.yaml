@@ -5,6 +5,7 @@ logger:
   encoder: console
   level: debug
 tokenomics:
+  welcomeBonusV2Amount: 500
   slashingFloor: 1
   adoption:
     milestones: 7
@@ -38,6 +39,7 @@ tokenomics:
         maxT1Referrals: 1
         slashingDisabled: false
 miner:
+  welcomeBonusV2Amount: 500
   ethereumDistributionFrequency:
     min: 24h
     max: 672h
