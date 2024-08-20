@@ -227,6 +227,10 @@ func (r *repository) GetMiningSummary(ctx context.Context, userID string) (*Mini
 		} else {
 			activeT1Referrals = int32(math.Min(float64((*r.cfg.MiningBoost.levels.Load())[int(*ms[0].MiningBoostLevelIndex)].MaxT1Referrals), float64(ms[0].ActiveT1Referrals)))
 		}
+	} else {
+		if r.cfg.T1ReferralsAllowedWithoutAnyMiningBoostLevel {
+			activeT1Referrals = ms[0].ActiveT1Referrals
+		}
 	}
 
 	return &MiningSummary{
