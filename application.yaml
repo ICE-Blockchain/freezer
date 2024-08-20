@@ -72,6 +72,7 @@ mining-boost: &mining-boost
       - https://bsc-dataseed1.binance.org/
   paymentAddress: "0x0000000000000000000000000000000000000000"
 tokenomics: &tokenomics
+  t1ReferralsAllowedWithoutAnyMiningBoostLevel: false
   welcomeBonusV2Amount: 500
   defaultReferralName: bogus
   slashingFloor: 5
@@ -250,6 +251,7 @@ miner:
   slashingDaysCount: 10
   t1LimitCount: 2
   welcomeBonusV2Amount: 500
+  t1ReferralsAllowedWithoutAnyMiningBoostLevel: false
 kyc/quiz:
   maxResetCount: 0
   maxAttemptsAllowed: 3

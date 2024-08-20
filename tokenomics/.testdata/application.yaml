@@ -5,6 +5,7 @@ logger:
   encoder: console
   level: debug
 tokenomics: &tokenomics
+  t1ReferralsAllowedWithoutAnyMiningBoostLevel: false
   welcomeBonusV2Amount: 500
   wintr/connectors/storage/v3:
     url: redis://default:@localhost:6379

@@ -164,6 +164,10 @@ func mine(now *time.Time, usr *user, t0Ref, tMinus1Ref *referral) (updatedUser *
 			} else {
 				activeT1Referrals = int32(math.Min(float64((*cfg.miningBoostLevels.Load())[int(*updatedUser.MiningBoostLevelIndex)].MaxT1Referrals), float64(updatedUser.ActiveT1Referrals)))
 			}
+		} else {
+			if cfg.T1ReferralsAllowedWithoutAnyMiningBoostLevel {
+				activeT1Referrals = updatedUser.ActiveT1Referrals
+			}
 		}
 		t1Rate := (25 * float64(activeT1Referrals)) * baseMiningRate * elapsedTimeFraction / 100
 		t2Rate := (5 * float64(updatedUser.ActiveT2Referrals)) * baseMiningRate * elapsedTimeFraction / 100
