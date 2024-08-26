@@ -17,6 +17,19 @@ cmd/freezer:
     maxLimit: 1000
   wintr/auth/ice:
     jwtSecret: bogus
+cmd/freezer-miner:
+  host: localhost:5343
+  version: local
+  defaultEndpointTimeout: 30s
+  httpServer:
+    port: 5343
+    certPath: cmd/freezer-refrigerant/.testdata/localhost.crt
+    keyPath: cmd/freezer-refrigerant/.testdata/localhost.key
+  defaultPagination:
+    limit: 20
+    maxLimit: 1000
+  wintr/auth/ice:
+    jwtSecret: bogus
 cmd/freezer-refrigerant:
   host: localhost:3443
   version: local
@@ -73,6 +86,7 @@ mining-boost: &mining-boost
   paymentAddress: "0x0000000000000000000000000000000000000000"
 tokenomics: &tokenomics
   t1ReferralsAllowedWithoutAnyMiningBoostLevel: false
+  tasksV2Enabled: false
   welcomeBonusV2Amount: 500
   defaultReferralName: bogus
   slashingFloor: 5
@@ -80,10 +94,10 @@ tokenomics: &tokenomics
     startingBaseMiningRate: 16
     milestones: 7
     durationBetweenMilestones: 3m
-  blockchain-coin-stats-json-url: https://ice-staging.b-cdn.net/assets/auth-config.json
+  blockchain-coin-stats-json-url: https://ice-staging.b-cdn.net/sunwaves/assets/blockchain_coin_stats.json
   tenant: generic
   kyc:
-    try-reset-kyc-steps-url: https://something.example.com
+    try-reset-kyc-steps-url: https://localhost:1443/v1w/kyc/tryResetKYCSteps/users
     config-json-url: https://ice-staging.b-cdn.net/something/somebogus.json
     face-recognition-delay: 5m
     social1-delay: 3m
@@ -101,16 +115,16 @@ tokenomics: &tokenomics
       user: default
       password:
   wintr/connectors/storage/v3:
-    url: redis://default:@localhost:6379
+    url: redis://default:@localhost:6381
   wintr/connectors/storage/v2: &globalDB
     runDDL: true
-    primaryURL: postgresql://root:pass@localhost:5436/freezer-global
+    primaryURL: postgresql://root:pass@localhost:5437/freezer-global
     timeout: 90s
     credentials:
       user: root
       password: pass
     replicaURLs:
-      - postgresql://root:pass@localhost:5436/freezer-global
+      - postgresql://root:pass@localhost:5437/freezer-global
   messageBroker: &tokenomicsMessageBroker
     consumerGroup: freezer-local
     createTopics: true
@@ -228,14 +242,16 @@ tokenomics: &tokenomics
       - 20
     kycPassedExtraBonus: 300
   mining-boost: *mining-boost
+  detailed-coin-metrics:
+    refresh-interval: 1m
 wintr/connectors/storage/v2: &db
   runDDL: true
-  primaryURL: postgresql://root:pass@localhost:5433/eskimo
+  primaryURL: postgresql://root:pass@localhost:5437/freezer-global
   credentials:
     user: root
     password: pass
   replicaURLs:
-    - postgresql://root:pass@localhost:5433/eskimo
+    - postgresql://root:pass@localhost:5437/freezer-global
 miner:
   ethereumDistributionFrequency:
     min: 24h
