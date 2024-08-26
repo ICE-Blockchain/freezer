@@ -280,13 +280,22 @@ func (s *completedTasksSource) Process(ctx context.Context, message *messagebrok
 	}
 	const requiredCompletedTasks, adoptionMultiplicationFactor = 6, 168
 	var val struct {
-		UserID         string `json:"userId" example:"edfd8c02-75e0-4687-9ac2-1ce4723865c4"`
-		CompletedTasks uint64 `json:"completedTasks,omitempty" example:"3"`
+		UserID         string  `json:"userId" example:"edfd8c02-75e0-4687-9ac2-1ce4723865c4"`
+		Type           string  `json:"type" example:"claim_username"`
+		CompletedTasks uint64  `json:"completedTasks,omitempty" example:"3"`
+		Prize          float64 `json:"prize,omitempty" example:"100"`
 	}
-	if err = json.UnmarshalContext(ctx, message.Value, &val); err != nil || val.UserID == "" || val.CompletedTasks != requiredCompletedTasks {
+	if err = json.UnmarshalContext(ctx, message.Value, &val); err != nil || val.UserID == "" ||
+		(!s.cfg.TasksV2Enabled && val.CompletedTasks != requiredCompletedTasks) ||
+		(s.cfg.TasksV2Enabled && val.Type == "") {
 		return errors.Wrapf(err, "process: cannot unmarshall %v into %#v", string(message.Value), &val)
 	}
-	duplGuardKey := fmt.Sprintf("completed_tasks_ice_prize_dupl_guards:%v", val.UserID)
+	var duplGuardKey string
+	if s.cfg.TasksV2Enabled {
+		duplGuardKey = fmt.Sprintf("completed_tasks_ice_prize_dupl_guards:%v:%v", val.Type, val.UserID)
+	} else {
+		duplGuardKey = fmt.Sprintf("completed_tasks_ice_prize_dupl_guards:%v", val.UserID)
+	}
 	if set, dErr := s.db.SetNX(ctx, duplGuardKey, "", s.cfg.MiningSessionDuration.Min).Result(); dErr != nil || !set {
 		if dErr == nil {
 			dErr = ErrDuplicate
@@ -304,22 +313,22 @@ func (s *completedTasksSource) Process(ctx context.Context, message *messagebrok
 			).ErrorOrNil()
 		}
 	}()
-	if err != nil {
-		return errors.Wrap(err, "failed to getCurrentAdoption")
-	}
 	id, err := GetOrInitInternalID(ctx, s.db, val.UserID, s.cfg.WelcomeBonusV2Amount)
 	if err != nil {
 		return errors.Wrapf(err, "failed to getOrInitInternalID for userID:%v", val.UserID)
 	}
-	res, err := storage.Get[struct{ model.CreatedAtField }](ctx, s.db, model.SerializedUsersKey(id))
-	if err != nil || len(res) == 0 {
-		if err == nil {
-			err = errors.Wrapf(ErrRelationNotFound, "missing state for id:%v", id)
-		}
+	prize := val.Prize
+	if !s.cfg.TasksV2Enabled {
+		res, err := storage.Get[struct{ model.CreatedAtField }](ctx, s.db, model.SerializedUsersKey(id))
+		if err != nil || len(res) == 0 {
+			if err == nil {
+				err = errors.Wrapf(ErrRelationNotFound, "missing state for id:%v", id)
+			}
 
-		return errors.Wrapf(err, "failed to get GetAdoptionSummary for id:%v", id)
+			return errors.Wrapf(err, "failed to get GetAdoptionSummary for id:%v", id)
+		}
+		prize = s.cfg.BaseMiningRate(time.Now(), res[0].CreatedAt) * adoptionMultiplicationFactor
 	}
-	prize := s.cfg.BaseMiningRate(time.Now(), res[0].CreatedAt) * adoptionMultiplicationFactor
 
 	return errors.Wrapf(s.db.HIncrByFloat(ctx, model.SerializedUsersKey(id), "balance_solo_pending", prize).Err(),
 		"failed to incr balance_solo_pending for userID:%v by %v", val.UserID, prize)

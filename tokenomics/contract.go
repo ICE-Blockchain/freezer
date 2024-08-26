@@ -436,6 +436,7 @@ type (
 		SlashingFloor                                float64 `yaml:"slashingFloor" mapstructure:"slashingFloor"`
 		WelcomeBonusV2Amount                         float64 `yaml:"welcomeBonusV2Amount" mapstructure:"welcomeBonusV2Amount"`
 		T1ReferralsAllowedWithoutAnyMiningBoostLevel bool    `yaml:"t1ReferralsAllowedWithoutAnyMiningBoostLevel" mapstructure:"t1ReferralsAllowedWithoutAnyMiningBoostLevel"`
+		TasksV2Enabled                               bool    `yaml:"tasksV2Enabled" mapstructure:"tasksV2Enabled"`
 	}
 )
 

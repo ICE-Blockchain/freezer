@@ -6,6 +6,7 @@ logger:
   level: debug
 tokenomics: &tokenomics
   t1ReferralsAllowedWithoutAnyMiningBoostLevel: false
+  tasksV2Enabled: false
   welcomeBonusV2Amount: 500
   wintr/connectors/storage/v3:
     url: redis://default:@localhost:6379
