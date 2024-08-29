@@ -46,7 +46,7 @@ type (
 
 const (
 	applicationYamlKey = "cmd/freezer-refrigerant"
-	swaggerRoot        = "/tokenomics/w"
+	swaggerRootSuffix  = "/tokenomics/w"
 
 	adminRole = "admin"
 )
@@ -78,5 +78,6 @@ type (
 	config struct {
 		Host    string `yaml:"host"`
 		Version string `yaml:"version"`
+		Tenant  string `yaml:"tenant"`
 	}
 )
