@@ -8,7 +8,6 @@ cmd/freezer:
   host: localhost:2443
   version: local
   defaultEndpointTimeout: 30s
-  tenant: sunwaves
   httpServer:
     port: 2443
     certPath: cmd/freezer/.testdata/localhost.crt
@@ -35,6 +34,7 @@ cmd/freezer-refrigerant:
   host: localhost:3443
   version: local
   defaultEndpointTimeout: 30s
+  #tenant: sunwaves
   httpServer:
     port: 3443
     certPath: cmd/freezer-refrigerant/.testdata/localhost.crt
