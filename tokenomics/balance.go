@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"slices"
 	"sort"
 	stdlibtime "time"
 
@@ -286,12 +287,12 @@ func (s *completedTasksSource) Process(ctx context.Context, message *messagebrok
 		Prize          float64 `json:"prize,omitempty" example:"100"`
 	}
 	if err = json.UnmarshalContext(ctx, message.Value, &val); err != nil || val.UserID == "" ||
-		(!s.cfg.TasksV2Enabled && val.CompletedTasks != requiredCompletedTasks) ||
-		(s.cfg.TasksV2Enabled && val.Type == "") {
+		(!s.tasksV2Enabled(val.UserID) && val.CompletedTasks != requiredCompletedTasks) ||
+		(s.tasksV2Enabled(val.UserID) && val.Type == "") {
 		return errors.Wrapf(err, "process: cannot unmarshall %v into %#v", string(message.Value), &val)
 	}
 	var duplGuardKey string
-	if s.cfg.TasksV2Enabled {
+	if s.tasksV2Enabled(val.UserID) {
 		duplGuardKey = fmt.Sprintf("completed_tasks_ice_prize_dupl_guards:%v:%v", val.Type, val.UserID)
 	} else {
 		duplGuardKey = fmt.Sprintf("completed_tasks_ice_prize_dupl_guards:%v", val.UserID)
@@ -318,7 +319,7 @@ func (s *completedTasksSource) Process(ctx context.Context, message *messagebrok
 		return errors.Wrapf(err, "failed to getOrInitInternalID for userID:%v", val.UserID)
 	}
 	prize := val.Prize
-	if !s.cfg.TasksV2Enabled {
+	if !s.tasksV2Enabled(val.UserID) {
 		res, err := storage.Get[struct{ model.CreatedAtField }](ctx, s.db, model.SerializedUsersKey(id))
 		if err != nil || len(res) == 0 {
 			if err == nil {
@@ -346,4 +347,8 @@ func daysInMonth(t *time.Time) uint64 {
 	y, m, _ := t.Date()
 
 	return uint64(stdlibtime.Date(y, m+1, 0, 0, 0, 0, 0, stdlibtime.UTC).Day())
+}
+
+func (r *repository) tasksV2Enabled(userID string) bool {
+	return r.cfg.TasksV2Enabled || (len(r.cfg.AdminUsers) > 0 && slices.Contains(r.cfg.AdminUsers, userID))
 }
