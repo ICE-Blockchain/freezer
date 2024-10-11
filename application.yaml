@@ -88,6 +88,9 @@ mining-boost: &mining-boost
 tokenomics: &tokenomics
   t1ReferralsAllowedWithoutAnyMiningBoostLevel: false
   tasksV2Enabled: false
+  adminUsers:
+    - user1
+    - user2
   welcomeBonusV2Amount: 500
   defaultReferralName: bogus
   slashingFloor: 5
