@@ -3,7 +3,7 @@ module github.com/ice-blockchain/freezer
 go 1.23
 
 require (
-	github.com/ClickHouse/ch-go v0.63.0
+	github.com/ClickHouse/ch-go v0.63.1
 	github.com/alitto/pond v1.9.2
 	github.com/bsm/redislock v0.9.4
 	github.com/cenkalti/backoff/v4 v4.3.0

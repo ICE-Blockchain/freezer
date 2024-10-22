@@ -164,7 +164,7 @@ func trueOncePerWorkerIteration(tb testing.TB, totalWorkers, totalBatches uint64
 }
 
 func slowTelemetry(workers int64) *telemetry {
-	deadlineMultiplier := stdlibtime.Duration(12)
+	deadlineMultiplier := stdlibtime.Duration(24)
 	tel := new(telemetry).mustInit(config{Workers: workers})
 	tel.collectElapsed(0, stdlibtime.Now().Add(-deadlineMultiplier*60*stdlibtime.Second))
 	tel.collectElapsed(1, stdlibtime.Now().Add(-deadlineMultiplier*50*stdlibtime.Second))
