@@ -164,16 +164,17 @@ func trueOncePerWorkerIteration(tb testing.TB, totalWorkers, totalBatches uint64
 }
 
 func slowTelemetry(workers int64) *telemetry {
+	deadlineMultiplier := stdlibtime.Duration(12)
 	tel := new(telemetry).mustInit(config{Workers: workers})
-	tel.collectElapsed(0, stdlibtime.Now().Add(-60*stdlibtime.Second))
-	tel.collectElapsed(1, stdlibtime.Now().Add(-50*stdlibtime.Second))
-	tel.collectElapsed(2, stdlibtime.Now().Add(-40*stdlibtime.Second))
-	tel.collectElapsed(3, stdlibtime.Now().Add(-30*stdlibtime.Second))
-	tel.collectElapsed(4, stdlibtime.Now().Add(-20*stdlibtime.Second))
-	tel.collectElapsed(5, stdlibtime.Now().Add(-10*stdlibtime.Second))
-	tel.collectElapsed(6, stdlibtime.Now().Add(-1*stdlibtime.Second))
-	tel.collectElapsed(7, stdlibtime.Now().Add(-1*stdlibtime.Second))
-	tel.collectElapsed(8, stdlibtime.Now().Add(-1*stdlibtime.Second))
+	tel.collectElapsed(0, stdlibtime.Now().Add(-deadlineMultiplier*60*stdlibtime.Second))
+	tel.collectElapsed(1, stdlibtime.Now().Add(-deadlineMultiplier*50*stdlibtime.Second))
+	tel.collectElapsed(2, stdlibtime.Now().Add(-deadlineMultiplier*40*stdlibtime.Second))
+	tel.collectElapsed(3, stdlibtime.Now().Add(-deadlineMultiplier*30*stdlibtime.Second))
+	tel.collectElapsed(4, stdlibtime.Now().Add(-deadlineMultiplier*20*stdlibtime.Second))
+	tel.collectElapsed(5, stdlibtime.Now().Add(-deadlineMultiplier*10*stdlibtime.Second))
+	tel.collectElapsed(6, stdlibtime.Now().Add(-deadlineMultiplier*1*stdlibtime.Second))
+	tel.collectElapsed(7, stdlibtime.Now().Add(-deadlineMultiplier*1*stdlibtime.Second))
+	tel.collectElapsed(8, stdlibtime.Now().Add(-deadlineMultiplier*1*stdlibtime.Second))
 
 	return tel
 }
