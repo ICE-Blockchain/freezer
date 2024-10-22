@@ -53,7 +53,7 @@ func (t *telemetry) shouldSynchronizeBalanceFunc(workerNumber, totalBatches, ite
 	if t.cfg.Development {
 		deadline = float64(stdlibtime.Minute)
 	} else {
-		deadline = float64(stdlibtime.Hour)
+		deadline = float64(12 * stdlibtime.Hour)
 	}
 	timingPrevStep := t.registry.Get(t.steps[0]).(metrics.Timer).Percentile(0.99) // nolint:forcetypeassert
 	targetIterations := uint64(deadline / timingPrevStep)
