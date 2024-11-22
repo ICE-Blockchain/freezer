@@ -38,7 +38,6 @@ type (
 		BalanceT1PendingAppliedResettableField
 		BalanceT1WelcomeBonusPendingResettableField
 		BalanceT1WelcomeBonusPendingAppliedResettableField
-		BalanceSoloPendingResettableField
 		BalanceSoloPendingAppliedResettableField
 		ActiveT1ReferralsResettableField
 		model.BalanceTotalStandardField
