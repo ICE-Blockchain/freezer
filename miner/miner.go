@@ -78,11 +78,7 @@ func MustStartMining(ctx context.Context, cancel context.CancelFunc) Client {
 	for workerNumber := int64(0); workerNumber < cfg.Workers; workerNumber++ {
 		go func(wn int64) {
 			defer mi.wg.Done()
-			if cfg.Tenant == tokeroTenant {
-				mi.reset(ctx, wn)
-			} else {
-				mi.mine(ctx, wn)
-			}
+			mi.mine(ctx, wn)
 		}(workerNumber)
 	}
 

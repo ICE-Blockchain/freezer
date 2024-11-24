@@ -42,8 +42,6 @@ const (
 	applicationYamlKey       = "miner"
 	parentApplicationYamlKey = "tokenomics"
 	requestDeadline          = 30 * stdlibtime.Second
-
-	tokeroTenant = "tokero"
 )
 
 // .
