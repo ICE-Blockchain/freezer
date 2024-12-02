@@ -3,10 +3,11 @@
 package main
 
 import (
+	"github.com/pkg/errors"
+
 	"github.com/ice-blockchain/eskimo/users"
 	coindistribution "github.com/ice-blockchain/freezer/coin-distribution"
 	"github.com/ice-blockchain/freezer/tokenomics"
-	"github.com/pkg/errors"
 )
 
 // Public API.
