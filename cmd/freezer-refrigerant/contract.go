@@ -6,6 +6,7 @@ import (
 	"github.com/ice-blockchain/eskimo/users"
 	coindistribution "github.com/ice-blockchain/freezer/coin-distribution"
 	"github.com/ice-blockchain/freezer/tokenomics"
+	"github.com/pkg/errors"
 )
 
 // Public API.
@@ -67,6 +68,16 @@ const (
 	transactionAlreadyUsed                        = "TRANSACTION_ALREADY_USED"
 
 	defaultDistributionLimit = 5000
+
+	doctorXTenant = "doctorx"
+)
+
+// .
+var (
+	//nolint:gochecknoglobals // Because its loaded once, at runtime.
+	cfg                    config
+	errMiningDisabled      = errors.New("mining disabled")
+	errMiningBoostDisabled = errors.New("mining boost disabled")
 )
 
 type (

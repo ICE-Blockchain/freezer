@@ -17,6 +17,10 @@ func mine(now *time.Time, usr *user, t0Ref, tMinus1Ref *referral) (updatedUser *
 	}
 	clonedUser1 := *usr
 	updatedUser = &clonedUser1
+	if cfg.Tenant == doctorXTenant {
+		return updatedUser, false, false, 0, 0
+	}
+
 	pendingResurrectionForTMinus1, pendingResurrectionForT0 := resurrect(now, updatedUser, t0Ref, tMinus1Ref)
 	IDT0Changed, _ = changeT0AndTMinus1Referrals(updatedUser)
 	if updatedUser.MiningSessionSoloEndedAt.Before(*now.Time) && updatedUser.isAbsoluteZero() {

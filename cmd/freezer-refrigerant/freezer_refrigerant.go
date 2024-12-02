@@ -28,7 +28,6 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	var cfg config
 	appCfg.MustLoadFromKey(applicationYamlKey, &cfg)
 	api.SwaggerInfo.Host = cfg.Host
 	api.SwaggerInfo.Version = cfg.Version
