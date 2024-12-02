@@ -374,30 +374,32 @@ func (m *miner) mine(ctx context.Context, workerNumber int64) {
 			}
 
 			if updatedUser != nil {
-				if userStoppedMining := didUserStoppedMining(now, usr); userStoppedMining != nil {
-					referralsCountGuardOnlyUpdatedUsers = append(referralsCountGuardOnlyUpdatedUsers, userStoppedMining)
-				}
-				if userStoppedMining := didReferralJustStopMining(now, usr, t0Ref, tMinus1Ref); userStoppedMining != nil {
-					referralsThatStoppedMining = append(referralsThatStoppedMining, userStoppedMining)
-				}
-				if dayOffStarted := didANewDayOffJustStart(now, usr); dayOffStarted != nil {
-					msgs = append(msgs, dayOffStartedMessage(reqCtx, dayOffStarted))
-				}
-				if t0Ref != nil {
-					if IDT0Changed {
-						if !usr.BalanceLastUpdatedAt.IsNil() {
-							t1ReferralsToIncrementActiveValue[t0Ref.ID]++
-							if t0Ref.IDT0 != 0 {
-								t2ReferralsToIncrementActiveValue[t0Ref.IDT0]++
+				if cfg.Tenant != doctorXTenant {
+					if userStoppedMining := didUserStoppedMining(now, usr); userStoppedMining != nil {
+						referralsCountGuardOnlyUpdatedUsers = append(referralsCountGuardOnlyUpdatedUsers, userStoppedMining)
+					}
+					if userStoppedMining := didReferralJustStopMining(now, usr, t0Ref, tMinus1Ref); userStoppedMining != nil {
+						referralsThatStoppedMining = append(referralsThatStoppedMining, userStoppedMining)
+					}
+					if dayOffStarted := didANewDayOffJustStart(now, usr); dayOffStarted != nil {
+						msgs = append(msgs, dayOffStartedMessage(reqCtx, dayOffStarted))
+					}
+					if t0Ref != nil {
+						if IDT0Changed {
+							if !usr.BalanceLastUpdatedAt.IsNil() {
+								t1ReferralsToIncrementActiveValue[t0Ref.ID]++
+								if t0Ref.IDT0 != 0 {
+									t2ReferralsToIncrementActiveValue[t0Ref.IDT0]++
+								}
+							}
+							if usr.ActiveT1Referrals > 0 && t0Ref.ID != 0 {
+								t2ReferralsToIncrementActiveValue[t0Ref.ID] += usr.ActiveT1Referrals
 							}
 						}
-						if usr.ActiveT1Referrals > 0 && t0Ref.ID != 0 {
-							t2ReferralsToIncrementActiveValue[t0Ref.ID] += usr.ActiveT1Referrals
+						if usr.IDTMinus1 != t0Ref.IDT0 {
+							updatedUser.IDTMinus1 = t0Ref.IDT0
+							tMinus1Ref = tMinus1Referrals[updatedUser.IDTMinus1]
 						}
-					}
-					if usr.IDTMinus1 != t0Ref.IDT0 {
-						updatedUser.IDTMinus1 = t0Ref.IDT0
-						tMinus1Ref = tMinus1Referrals[updatedUser.IDTMinus1]
 					}
 				}
 				userCoinDistributions, balanceDistributedForT0, balanceDistributedForTMinus1 := updatedUser.processEthereumCoinDistribution(startedCoinDistributionCollecting, now, t0Ref, tMinus1Ref)
@@ -408,39 +410,45 @@ func (m *miner) mine(ctx context.Context, workerNumber int64) {
 				if balanceDistributedForTMinus1 > 0 {
 					balanceT2EthereumIncr[tMinus1Ref.ID] += balanceDistributedForTMinus1
 				}
-				if tMinus1Ref != nil && tMinus1Ref.ID != 0 && pendingAmountForTMinus1 != 0 {
-					pendingBalancesForTMinus1[tMinus1Ref.ID] += pendingAmountForTMinus1
-				}
-				if t0Ref != nil && t0Ref.ID != 0 && pendingAmountForT0 != 0 {
-					pendingBalancesForT0[t0Ref.ID] += pendingAmountForT0
-				}
-				if afterWelcomeBonusV2Applied := updatedUser.WelcomeBonusV2Applied != nil && *updatedUser.WelcomeBonusV2Applied; t0Ref != nil && t0Ref.ID != 0 && beforeWelcomeBonusV2NotApplied && afterWelcomeBonusV2Applied {
-					idT0 := t0Ref.ID
-					if idT0 < 0 {
-						idT0 *= -1
+				if cfg.Tenant != doctorXTenant {
+					if tMinus1Ref != nil && tMinus1Ref.ID != 0 && pendingAmountForTMinus1 != 0 {
+						pendingBalancesForTMinus1[tMinus1Ref.ID] += pendingAmountForTMinus1
 					}
-					balanceT1WelcomeBonusIncr[idT0] += cfg.WelcomeBonusV2Amount
+					if t0Ref != nil && t0Ref.ID != 0 && pendingAmountForT0 != 0 {
+						pendingBalancesForT0[t0Ref.ID] += pendingAmountForT0
+					}
+					if afterWelcomeBonusV2Applied := updatedUser.WelcomeBonusV2Applied != nil && *updatedUser.WelcomeBonusV2Applied; t0Ref != nil && t0Ref.ID != 0 && beforeWelcomeBonusV2NotApplied && afterWelcomeBonusV2Applied {
+						idT0 := t0Ref.ID
+						if idT0 < 0 {
+							idT0 *= -1
+						}
+						balanceT1WelcomeBonusIncr[idT0] += cfg.WelcomeBonusV2Amount
+					}
 				}
 				updatedUsers = append(updatedUsers, &updatedUser.UpdatedUser)
 			} else {
-				if updUsr := updateT0AndTMinus1ReferralsForUserHasNeverMined(usr); updUsr != nil {
-					referralsUpdated = append(referralsUpdated, updUsr)
-					if t0Ref != nil && t0Ref.ID != 0 && usr.ActiveT1Referrals > 0 {
-						t2ReferralsToIncrementActiveValue[t0Ref.ID] += usr.ActiveT1Referrals
+				if cfg.Tenant != doctorXTenant {
+					if updUsr := updateT0AndTMinus1ReferralsForUserHasNeverMined(usr); updUsr != nil {
+						referralsUpdated = append(referralsUpdated, updUsr)
+						if t0Ref != nil && t0Ref.ID != 0 && usr.ActiveT1Referrals > 0 {
+							t2ReferralsToIncrementActiveValue[t0Ref.ID] += usr.ActiveT1Referrals
+						}
 					}
 				}
 			}
-			totalStandardBalance, totalPreStakingBalance := usr.BalanceTotalStandard, usr.BalanceTotalPreStaking
-			if updatedUser != nil {
-				totalStandardBalance, totalPreStakingBalance = updatedUser.BalanceTotalStandard, updatedUser.BalanceTotalPreStaking
-			}
-			totalBalance := totalStandardBalance + totalPreStakingBalance
-			if shouldSynchronizeBalance {
-				userGlobalRanks = append(userGlobalRanks, balancesynchronizer.GlobalRank(usr.ID, totalBalance))
-				if math.IsNaN(totalStandardBalance) || math.IsNaN(totalPreStakingBalance) {
-					log.Info(fmt.Sprintf("bmr[%#v],before[%+v], after[%+v]", updatedUser.baseMiningRate(now), usr, updatedUser))
+			if cfg.Tenant != doctorXTenant {
+				totalStandardBalance, totalPreStakingBalance := usr.BalanceTotalStandard, usr.BalanceTotalPreStaking
+				if updatedUser != nil {
+					totalStandardBalance, totalPreStakingBalance = updatedUser.BalanceTotalStandard, updatedUser.BalanceTotalPreStaking
 				}
-				msgs = append(msgs, balancesynchronizer.BalanceUpdatedMessage(reqCtx, usr.UserID, totalStandardBalance, totalPreStakingBalance))
+				totalBalance := totalStandardBalance + totalPreStakingBalance
+				if shouldSynchronizeBalance {
+					userGlobalRanks = append(userGlobalRanks, balancesynchronizer.GlobalRank(usr.ID, totalBalance))
+					if math.IsNaN(totalStandardBalance) || math.IsNaN(totalPreStakingBalance) {
+						log.Info(fmt.Sprintf("bmr[%#v],before[%+v], after[%+v]", updatedUser.baseMiningRate(now), usr, updatedUser))
+					}
+					msgs = append(msgs, balancesynchronizer.BalanceUpdatedMessage(reqCtx, usr.UserID, totalStandardBalance, totalPreStakingBalance))
+				}
 			}
 		}
 
