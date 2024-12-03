@@ -246,7 +246,7 @@ func (r *repository) CollectCoinDistributionsForReview(ctx context.Context, reco
 			log.Warn(fmt.Sprintf("(%#v) is a duplicate of (%#v)", record, otherRecord))
 		}
 	}
-	const columns = 9
+	const columns = 10
 	values := make([]string, 0, len(records))
 	args := make([]any, 0, len(records)*columns)
 	ix := 0
@@ -261,10 +261,11 @@ func (r *repository) CollectCoinDistributionsForReview(ctx context.Context, reco
 			record.ReferredByUsername,
 			record.UserID,
 			record.EarnerUserID,
-			record.EthAddress)
+			record.EthAddress,
+			record.Verified)
 		ix++
 	}
-	sql := fmt.Sprintf(`INSERT INTO coin_distributions_by_earner(created_at,day,internal_id,balance,username,referred_by_username,user_id,earner_user_id,eth_address) 
+	sql := fmt.Sprintf(`INSERT INTO coin_distributions_by_earner(created_at,day,internal_id,balance,username,referred_by_username,user_id,earner_user_id,eth_address,verified) 
 																 VALUES %v
 						ON CONFLICT (day, user_id, earner_user_id) DO UPDATE
 							SET 
@@ -272,7 +273,8 @@ func (r *repository) CollectCoinDistributionsForReview(ctx context.Context, reco
 								balance = EXCLUDED.balance,
 								username = EXCLUDED.username,
 								referred_by_username = EXCLUDED.referred_by_username,
-								eth_address = EXCLUDED.eth_address`, strings.Join(values, ",\n"))
+								eth_address = EXCLUDED.eth_address,
+								verified = EXCLUDED.verified`, strings.Join(values, ",\n"))
 	_, err := storage.Exec(ctx, r.db, sql, args...)
 
 	return errors.Wrapf(err, "failed to insert into coin_distributions_by_earner [%v]", len(records))

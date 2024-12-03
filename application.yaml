@@ -302,6 +302,16 @@ extra-bonus-notifier:
 balance-synchronizer:
   workers: 1
   batchSize: 100
+users: &users
+  wintr/connectors/storage/v2: &usersdb
+    runDDL: false
+    primaryURL: postgresql://root:pass@localhost:5433/eskimo
+    timeout: 90s
+    credentials:
+      user: root
+      password: pass
+    replicaURLs:
+      - postgresql://root:pass@localhost:5433/eskimo
 tokenomics_test:
   <<: *tokenomics
   messageBroker:

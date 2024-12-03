@@ -380,6 +380,21 @@ type (
 	MiningBoostAmountBurntField struct {
 		MiningBoostAmountBurnt *FlexibleFloat64 `json:"miningBoostAmountBurnt" redis:"mining_boost_amount_burnt,omitempty"`
 	}
+	PhoneNumberField struct {
+		PhoneNumber string `redis:"phone_number,omitempty" json:"phone_number"`
+	}
+	EmailField struct {
+		Email string `redis:"email,omitempty" json:"email"`
+	}
+	DistributionScenariosVerifiedField struct {
+		DistributionScenariosVerified bool `redis:"distribution_scenarios_verified" json:"distributionScenariosVerified"`
+	}
+	TelegramUserIDField struct {
+		TelegramUserID string `redis:"telegram_user_id,omitempty" json:"telegramUserId"`
+	}
+	TelegramBotIDField struct {
+		TelegramBotID string `redis:"telegram_bot_id,omitempty" json:"telegramBotId"`
+	}
 )
 
 type (

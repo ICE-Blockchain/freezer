@@ -26,11 +26,22 @@ func (ref *referral) username() string {
 	return "icenetwork/bogus"
 }
 
-func (ref *referral) isEligibleForSelfForEthereumDistribution(now, lastEthereumCoinDistributionProcessedAt *time.Time) bool {
+func (ref *referral) isEligibleForSelfForEthereumDistribution(now, lastEthereumCoinDistributionProcessedAt *time.Time, selfVerified bool) bool {
+	if ref == nil {
+		return false
+	}
 	coinDistributionCollectorSettings := cfg.coinDistributionCollectorSettings.Load()
+	miningBlockchainAccountAddress := ref.MiningBlockchainAccountAddress
+	if ref.isVerified() {
+		if !selfVerified {
+			return false
+		}
+	} else {
+		miningBlockchainAccountAddress = "skip"
+	}
 
-	return ref != nil &&
-		ref.ID != 0 &&
+	return ref.ID != 0 &&
+		ref.isMandatoryFieldsSetForDistributionValid() &&
 		coindistribution.IsEligibleForEthereumDistributionNow(
 			ref.ID,
 			now,
@@ -43,7 +54,7 @@ func (ref *referral) isEligibleForSelfForEthereumDistribution(now, lastEthereumC
 			coinDistributionCollectorSettings.MinMiningStreaksRequired,
 			ref.BalanceTotalStandard-ref.BalanceSoloEthereum-ref.BalanceT0Ethereum-ref.BalanceT1Ethereum-ref.BalanceT2Ethereum,
 			coinDistributionCollectorSettings.MinBalanceRequired,
-			ref.MiningBlockchainAccountAddress,
+			miningBlockchainAccountAddress,
 			ref.Country,
 			coinDistributionCollectorSettings.DeniedCountries,
 			now,
@@ -51,17 +62,20 @@ func (ref *referral) isEligibleForSelfForEthereumDistribution(now, lastEthereumC
 			ref.MiningSessionSoloStartedAt,
 			ref.MiningSessionSoloEndedAt,
 			coinDistributionCollectorSettings.EndDate,
-			ref.KYCState,
 			cfg.MiningSessionDuration.Max,
 			cfg.EthereumDistributionFrequency.Min,
 			cfg.EthereumDistributionFrequency.Max)
 }
 
-func (ref *referral) isEligibleForReferralForEthereumDistribution(now *time.Time) bool {
+func (ref *referral) isEligibleForReferralForEthereumDistribution(now *time.Time, selfVerified bool) bool {
 	coinDistributionCollectorSettings := cfg.coinDistributionCollectorSettings.Load()
+	if selfVerified && !ref.isVerified() {
+		return false
+	}
 
 	return ref != nil &&
 		ref.ID != 0 &&
+		ref.isMandatoryFieldsSetForDistributionValid() &&
 		coindistribution.IsEligibleForEthereumDistribution(
 			0,
 			0.1,
@@ -74,17 +88,23 @@ func (ref *referral) isEligibleForReferralForEthereumDistribution(now *time.Time
 			ref.MiningSessionSoloStartedAt,
 			ref.MiningSessionSoloEndedAt,
 			coinDistributionCollectorSettings.EndDate,
-			ref.KYCState,
 			cfg.MiningSessionDuration.Max,
 			cfg.EthereumDistributionFrequency.Min,
 			cfg.EthereumDistributionFrequency.Max)
 }
 
-func (u *user) isEligibleForSelfForEthereumDistribution(now *time.Time) bool {
+func (u *user) isEligibleForSelfForEthereumDistribution(now *time.Time, selfVerified bool) bool {
+	if u == nil {
+		return false
+	}
 	coinDistributionCollectorSettings := cfg.coinDistributionCollectorSettings.Load()
+	miningBlockchainAccountAddress := u.MiningBlockchainAccountAddress
+	if !selfVerified {
+		miningBlockchainAccountAddress = "skip"
+	}
 
-	return u != nil &&
-		u.ID != 0 &&
+	return u.ID != 0 &&
+		u.isMandatoryFieldsSetForDistributionValid() &&
 		coindistribution.IsEligibleForEthereumDistributionNow(
 			u.ID,
 			now,
@@ -97,7 +117,7 @@ func (u *user) isEligibleForSelfForEthereumDistribution(now *time.Time) bool {
 			coinDistributionCollectorSettings.MinMiningStreaksRequired,
 			u.BalanceTotalStandard-u.BalanceSoloEthereum-u.BalanceT0Ethereum-u.BalanceT1Ethereum-u.BalanceT2Ethereum,
 			coinDistributionCollectorSettings.MinBalanceRequired,
-			u.MiningBlockchainAccountAddress,
+			miningBlockchainAccountAddress,
 			u.Country,
 			coinDistributionCollectorSettings.DeniedCountries,
 			now,
@@ -105,7 +125,6 @@ func (u *user) isEligibleForSelfForEthereumDistribution(now *time.Time) bool {
 			u.MiningSessionSoloStartedAt,
 			u.MiningSessionSoloEndedAt,
 			coinDistributionCollectorSettings.EndDate,
-			u.KYCState,
 			cfg.MiningSessionDuration.Max,
 			cfg.EthereumDistributionFrequency.Min,
 			cfg.EthereumDistributionFrequency.Max)
@@ -114,6 +133,7 @@ func (u *user) isEligibleForSelfForEthereumDistribution(now *time.Time) bool {
 func (u *user) isEligibleForT0ForEthereumDistribution(now *time.Time, idT0 int64) bool {
 	return u != nil &&
 		u.ID != 0 &&
+		u.isMandatoryFieldsSetForDistributionValid() &&
 		coindistribution.IsEligibleForEthereumDistributionNow(
 			idT0,
 			now,
@@ -128,6 +148,7 @@ func (u *user) isEligibleForT0ForEthereumDistribution(now *time.Time, idT0 int64
 func (u *user) isEligibleForTMinus1ForEthereumDistribution(now *time.Time, idTMinus1 int64) bool {
 	return u != nil &&
 		u.ID != 0 &&
+		u.isMandatoryFieldsSetForDistributionValid() &&
 		coindistribution.IsEligibleForEthereumDistributionNow(
 			idTMinus1,
 			now,
@@ -153,18 +174,17 @@ func (u *user) isEligibleForReferralForEthereumDistribution(now *time.Time) bool
 		u.MiningSessionSoloStartedAt,
 		u.MiningSessionSoloEndedAt,
 		coinDistributionCollectorSettings.EndDate,
-		u.KYCState,
 		cfg.MiningSessionDuration.Max,
 		cfg.EthereumDistributionFrequency.Min,
 		cfg.EthereumDistributionFrequency.Max)
 }
 
 func (u *user) couldHaveBeenEligibleForEthereumDistributionRecently(now *time.Time) bool {
-	return u != nil && !u.MiningSessionSoloEndedAt.IsNil() && u.KYCStepPassedCorrectly(users.QuizKYCStep) && (u.MiningSessionSoloEndedAt.After(now.Add(-(cfg.MiningSessionDuration.Max / 8))) || coindistribution.AllowInactiveUsers) //nolint:lll // .
+	return u != nil && !u.MiningSessionSoloEndedAt.IsNil() && (u.MiningSessionSoloEndedAt.After(now.Add(-(cfg.MiningSessionDuration.Max / 8))) || coindistribution.AllowInactiveUsers) //nolint:lll // .
 }
 
 func (ref *referral) couldHaveBeenEligibleForEthereumDistributionRecently(now *time.Time) bool {
-	return ref != nil && !ref.MiningSessionSoloEndedAt.IsNil() && ref.KYCStepPassedCorrectly(users.QuizKYCStep) && (ref.MiningSessionSoloEndedAt.After(now.Add(-(cfg.MiningSessionDuration.Max / 8))) || coindistribution.AllowInactiveUsers) //nolint:lll // .
+	return ref != nil && !ref.MiningSessionSoloEndedAt.IsNil() && (ref.MiningSessionSoloEndedAt.After(now.Add(-(cfg.MiningSessionDuration.Max / 8))) || coindistribution.AllowInactiveUsers) //nolint:lll // .
 }
 
 //nolint:funlen // .
@@ -220,18 +240,22 @@ func (u *user) processEthereumCoinDistribution(
 			EthAddress:         u.MiningBlockchainAccountAddress,
 			InternalID:         u.ID,
 			Balance:            0,
+			Verified:           u.isVerified(),
 		}
-		soloMainnetRewardPoolContributionCD = &coindistribution.ByEarnerForReview{
-			CreatedAt:          now,
-			Username:           mainnetRewardPoolContributionIdentifier,
-			ReferredByUsername: mainnetRewardPoolContributionIdentifier,
-			UserID:             mainnetRewardPoolContributionIdentifier,
-			EarnerUserID:       fmt.Sprintf("(%v,%v)", u.UserID, u.UserID),
-			EthAddress:         cfg.MainnetRewardPoolContributionEthAddress,
-			InternalID:         999999999,
-			Balance:            0,
+		records = append(records, soloCD)
+		if cfg.MainnetRewardPoolContributionPercentage > 0 {
+			soloMainnetRewardPoolContributionCD = &coindistribution.ByEarnerForReview{
+				CreatedAt:          now,
+				Username:           mainnetRewardPoolContributionIdentifier,
+				ReferredByUsername: mainnetRewardPoolContributionIdentifier,
+				UserID:             mainnetRewardPoolContributionIdentifier,
+				EarnerUserID:       fmt.Sprintf("(%v,%v)", u.UserID, u.UserID),
+				EthAddress:         cfg.MainnetRewardPoolContributionEthAddress,
+				InternalID:         999999999,
+				Balance:            0,
+			}
+			records = append(records, soloMainnetRewardPoolContributionCD)
 		}
-		records = append(records, soloCD, soloMainnetRewardPoolContributionCD)
 	}
 	if u.couldHaveBeenEligibleForEthereumDistributionRecently(now) && t0.couldHaveBeenEligibleForEthereumDistributionRecently(now) && t0 != nil && t0.UserID != u.UserID && (tMinus1 == nil || (tMinus1.UserID != u.UserID && tMinus1.UserID != t0.UserID)) { //nolint:lll // .
 		if wasNotProcessedToday(now, u.SoloLastEthereumCoinDistributionProcessedAt) {
@@ -240,14 +264,18 @@ func (u *user) processEthereumCoinDistribution(
 				UserID:       u.UserID,
 				EarnerUserID: t0.UserID,
 				Balance:      0,
+				Verified:     u.isVerified(),
 			}
-			t0MainnetRewardPoolContributionCD = &coindistribution.ByEarnerForReview{
-				CreatedAt:    now,
-				UserID:       mainnetRewardPoolContributionIdentifier,
-				EarnerUserID: fmt.Sprintf("(%v,%v)", u.UserID, t0.UserID),
-				Balance:      0,
+			records = append(records, t0CD)
+			if cfg.MainnetRewardPoolContributionPercentage > 0 {
+				t0MainnetRewardPoolContributionCD = &coindistribution.ByEarnerForReview{
+					CreatedAt:    now,
+					UserID:       mainnetRewardPoolContributionIdentifier,
+					EarnerUserID: fmt.Sprintf("(%v,%v)", u.UserID, t0.UserID),
+					Balance:      0,
+				}
+				records = append(records, t0MainnetRewardPoolContributionCD)
 			}
-			records = append(records, t0CD, t0MainnetRewardPoolContributionCD)
 		}
 		if wasNotProcessedToday(now, u.ForT0LastEthereumCoinDistributionProcessedAt) {
 			forT0CD = &coindistribution.ByEarnerForReview{
@@ -255,14 +283,18 @@ func (u *user) processEthereumCoinDistribution(
 				UserID:       t0.UserID,
 				EarnerUserID: u.UserID,
 				Balance:      0,
+				Verified:     t0.KYCStepPassedCorrectly(users.QuizKYCStep) && t0.DistributionScenariosVerified,
 			}
-			forT0MainnetRewardPoolContributionCD = &coindistribution.ByEarnerForReview{
-				CreatedAt:    now,
-				UserID:       mainnetRewardPoolContributionIdentifier,
-				EarnerUserID: fmt.Sprintf("(%v,%v)", t0.UserID, u.UserID),
-				Balance:      0,
+			records = append(records, forT0CD)
+			if cfg.MainnetRewardPoolContributionPercentage > 0 {
+				forT0MainnetRewardPoolContributionCD = &coindistribution.ByEarnerForReview{
+					CreatedAt:    now,
+					UserID:       mainnetRewardPoolContributionIdentifier,
+					EarnerUserID: fmt.Sprintf("(%v,%v)", t0.UserID, u.UserID),
+					Balance:      0,
+				}
+				records = append(records, forT0MainnetRewardPoolContributionCD)
 			}
-			records = append(records, forT0CD, forT0MainnetRewardPoolContributionCD)
 		}
 	}
 	if u.couldHaveBeenEligibleForEthereumDistributionRecently(now) && tMinus1.couldHaveBeenEligibleForEthereumDistributionRecently(now) && tMinus1 != nil && tMinus1.UserID != u.UserID && t0 != nil && tMinus1.UserID != t0.UserID && wasNotProcessedToday(now, u.ForTMinus1LastEthereumCoinDistributionProcessedAt) { //nolint:lll // .
@@ -271,28 +303,36 @@ func (u *user) processEthereumCoinDistribution(
 			UserID:       tMinus1.UserID,
 			EarnerUserID: u.UserID,
 			Balance:      0,
+			Verified:     tMinus1.KYCStepPassedCorrectly(users.QuizKYCStep) && tMinus1.DistributionScenariosVerified,
 		}
-		forTMinus1MainnetRewardPoolContributionCD = &coindistribution.ByEarnerForReview{
-			CreatedAt:    now,
-			UserID:       mainnetRewardPoolContributionIdentifier,
-			EarnerUserID: fmt.Sprintf("(%v,%v)", tMinus1.UserID, u.UserID),
-			Balance:      0,
+		records = append(records, forTMinus1CD)
+		if cfg.MainnetRewardPoolContributionPercentage > 0 {
+			forTMinus1MainnetRewardPoolContributionCD = &coindistribution.ByEarnerForReview{
+				CreatedAt:    now,
+				UserID:       mainnetRewardPoolContributionIdentifier,
+				EarnerUserID: fmt.Sprintf("(%v,%v)", tMinus1.UserID, u.UserID),
+				Balance:      0,
+			}
+			records = append(records, forTMinus1MainnetRewardPoolContributionCD)
 		}
-		records = append(records, forTMinus1CD, forTMinus1MainnetRewardPoolContributionCD)
 	}
 
-	if u.isEligibleForSelfForEthereumDistribution(now) {
+	if u.isEligibleForSelfForEthereumDistribution(now, u.isVerified()) {
 		// Amount I've earned for myself.
 		soloCD.Balance = u.processEthereumCoinDistributionForSolo(now)
-		soloMainnetRewardPoolContributionCD.Balance = soloCD.Balance * cfg.MainnetRewardPoolContributionPercentage
-		soloCD.Balance -= soloMainnetRewardPoolContributionCD.Balance
+		if cfg.MainnetRewardPoolContributionPercentage > 0 {
+			soloMainnetRewardPoolContributionCD.Balance = soloCD.Balance * cfg.MainnetRewardPoolContributionPercentage
+			soloCD.Balance -= soloMainnetRewardPoolContributionCD.Balance
+		}
 		totalForSelf := soloCD.Balance
 
-		if t0 != nil && t0.UserID != u.UserID && (tMinus1 == nil || (tMinus1.UserID != u.UserID && tMinus1.UserID != t0.UserID)) && t0.isEligibleForReferralForEthereumDistribution(now) { //nolint:lll // .
+		if t0 != nil && t0.UserID != u.UserID && (tMinus1 == nil || (tMinus1.UserID != u.UserID && tMinus1.UserID != t0.UserID)) && t0.isEligibleForReferralForEthereumDistribution(now, u.isVerified()) { //nolint:lll // .
 			// Amount my T0 earned for me.
 			t0CD.Balance = u.processEthereumCoinDistributionForT0(now)
-			t0MainnetRewardPoolContributionCD.Balance = t0CD.Balance * cfg.MainnetRewardPoolContributionPercentage
-			t0CD.Balance -= t0MainnetRewardPoolContributionCD.Balance
+			if cfg.MainnetRewardPoolContributionPercentage > 0 {
+				t0MainnetRewardPoolContributionCD.Balance = t0CD.Balance * cfg.MainnetRewardPoolContributionPercentage
+				t0CD.Balance -= t0MainnetRewardPoolContributionCD.Balance
+			}
 			totalForSelf += t0CD.Balance
 		}
 
@@ -305,12 +345,14 @@ func (u *user) processEthereumCoinDistribution(
 		u.SoloLastEthereumCoinDistributionProcessedAt = nil
 	}
 
-	if t0 != nil && t0.UserID != u.UserID && (tMinus1 == nil || (tMinus1.UserID != u.UserID && tMinus1.UserID != t0.UserID)) && u.isEligibleForT0ForEthereumDistribution(now, t0.ID) && t0.isEligibleForSelfForEthereumDistribution(now, u.ForT0LastEthereumCoinDistributionProcessedAt) { //nolint:lll // .
+	if t0 != nil && t0.UserID != u.UserID && (tMinus1 == nil || (tMinus1.UserID != u.UserID && tMinus1.UserID != t0.UserID)) && u.isEligibleForT0ForEthereumDistribution(now, t0.ID) && t0.isEligibleForSelfForEthereumDistribution(now, u.ForT0LastEthereumCoinDistributionProcessedAt, u.isVerified()) { //nolint:lll // .
 		// Amount I've earned for my T0.
 		balanceDistributedForT0 = u.processEthereumCoinDistributionForForT0(t0, now)
 		forT0CD.Balance = balanceDistributedForT0
-		forT0MainnetRewardPoolContributionCD.Balance = forT0CD.Balance * cfg.MainnetRewardPoolContributionPercentage
-		forT0CD.Balance -= forT0MainnetRewardPoolContributionCD.Balance
+		if cfg.MainnetRewardPoolContributionPercentage > 0 {
+			forT0MainnetRewardPoolContributionCD.Balance = forT0CD.Balance * cfg.MainnetRewardPoolContributionPercentage
+			forT0CD.Balance -= forT0MainnetRewardPoolContributionCD.Balance
+		}
 
 		if forT0CD.Balance > 0 {
 			u.ForT0LastEthereumCoinDistributionProcessedAt = now
@@ -322,12 +364,14 @@ func (u *user) processEthereumCoinDistribution(
 		u.ForT0LastEthereumCoinDistributionProcessedAt = nil
 	}
 
-	if tMinus1 != nil && tMinus1.UserID != u.UserID && t0 != nil && tMinus1.UserID != t0.UserID && u.isEligibleForTMinus1ForEthereumDistribution(now, tMinus1.ID) && tMinus1.isEligibleForSelfForEthereumDistribution(now, u.ForTMinus1LastEthereumCoinDistributionProcessedAt) { //nolint:lll // .
+	if tMinus1 != nil && tMinus1.UserID != u.UserID && t0 != nil && tMinus1.UserID != t0.UserID && u.isEligibleForTMinus1ForEthereumDistribution(now, tMinus1.ID) && tMinus1.isEligibleForSelfForEthereumDistribution(now, u.ForTMinus1LastEthereumCoinDistributionProcessedAt, u.isVerified()) { //nolint:lll // .
 		// Amount I've earned for my T-1.
 		balanceDistributedForTMinus1 = u.processEthereumCoinDistributionForForTMinus1(tMinus1, now)
 		forTMinus1CD.Balance = balanceDistributedForTMinus1
-		forTMinus1MainnetRewardPoolContributionCD.Balance = forTMinus1CD.Balance * cfg.MainnetRewardPoolContributionPercentage
-		forTMinus1CD.Balance -= forTMinus1MainnetRewardPoolContributionCD.Balance
+		if cfg.MainnetRewardPoolContributionPercentage > 0 {
+			forTMinus1MainnetRewardPoolContributionCD.Balance = forTMinus1CD.Balance * cfg.MainnetRewardPoolContributionPercentage
+			forTMinus1CD.Balance -= forTMinus1MainnetRewardPoolContributionCD.Balance
+		}
 
 		if forTMinus1CD.Balance > 0 {
 			u.ForTMinus1LastEthereumCoinDistributionProcessedAt = now
@@ -549,4 +593,22 @@ func currentCoinDistributionCollectingEndedAt() *time.Time {
 	}
 
 	return time.New(coinDistributionCollectorStartedAt.Add(startingWindow))
+}
+
+func (u *user) isMandatoryFieldsSetForDistributionValid() bool {
+	return (u.PhoneNumber != "" && u.PhoneNumber != u.UserID) || (u.Email != "" && u.Email != u.UserID) ||
+		(u.TelegramUserID != "" && u.TelegramBotID != u.UserID && u.TelegramBotID != "" && u.TelegramUserID != u.UserID)
+}
+
+func (r *referral) isMandatoryFieldsSetForDistributionValid() bool {
+	return (r.PhoneNumber != "" && r.PhoneNumber != r.UserID) || (r.Email != "" && r.Email != r.UserID) ||
+		(r.TelegramUserID != "" && r.TelegramUserID != r.UserID && r.TelegramBotID != "" && r.TelegramBotID != r.UserID)
+}
+
+func (r *referral) isVerified() bool {
+	return r.KYCStepPassedCorrectly(users.QuizKYCStep) && r.DistributionScenariosVerified
+}
+
+func (u *user) isVerified() bool {
+	return u.KYCStepPassedCorrectly(users.QuizKYCStep) && u.DistributionScenariosVerified
 }

@@ -10,6 +10,7 @@ import (
 	stdlibtime "time"
 
 	"github.com/ice-blockchain/eskimo/kyc/quiz"
+	"github.com/ice-blockchain/eskimo/users"
 	dwh "github.com/ice-blockchain/freezer/bookkeeper/storage"
 	coindistribution "github.com/ice-blockchain/freezer/coin-distribution"
 	"github.com/ice-blockchain/freezer/model"
@@ -131,6 +132,11 @@ type (
 		model.SlashingRateForT0Field
 		model.SlashingRateForTMinus1Field
 		model.ExtraBonusDaysClaimNotAvailableField
+		model.PhoneNumberField
+		model.EmailField
+		model.DistributionScenariosVerifiedField
+		model.TelegramUserIDField
+		model.TelegramBotIDField
 	}
 	referralUpdated struct {
 		model.DeserializedUsersKey
@@ -163,6 +169,11 @@ type (
 		model.BalanceT2EthereumField
 		model.PreStakingAllocationField
 		model.PreStakingBonusField
+		model.PhoneNumberField
+		model.EmailField
+		model.DistributionScenariosVerifiedField
+		model.TelegramUserIDField
+		model.TelegramBotIDField
 	}
 
 	referralCountGuardUpdatedUser struct {
@@ -194,6 +205,7 @@ type (
 		coinDistributionWorkerMX                    *sync.Mutex
 		coinDistributionRepository                  coindistribution.Repository
 		quizRepository                              quiz.ReadRepository
+		usersRepository                             users.Repository
 		mb                                          messagebroker.Client
 		db                                          storage.DB
 		dwhClient                                   dwh.Client
