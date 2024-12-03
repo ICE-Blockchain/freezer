@@ -170,6 +170,12 @@ type (
 		model.DeserializedUsersKey
 	}
 
+	userThatStoppedMiningForDistribution struct {
+		model.ReferralsCountChangeGuardUpdatedAtField
+		model.MiningSessionSoloEndedAtField
+		model.DeserializedUsersKey
+	}
+
 	referralThatStoppedMining struct {
 		StoppedMiningAt     *time.Time
 		ID, IDT0, IDTMinus1 int64

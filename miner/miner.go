@@ -178,6 +178,7 @@ func (m *miner) mine(ctx context.Context, workerNumber int64) {
 		updatedUsers                                                         = make([]*UpdatedUser, 0, batchSize)
 		extraBonusOnlyUpdatedUsers                                           = make([]*extrabonusnotifier.UpdatedUser, 0, batchSize)
 		referralsCountGuardOnlyUpdatedUsers                                  = make([]*referralCountGuardUpdatedUser, 0, batchSize)
+		usersThatStoppedMiningForDistribution                                = make([]*userThatStoppedMiningForDistribution, 0, batchSize)
 		referralsUpdated                                                     = make([]*referralUpdated, 0, batchSize)
 		histories                                                            = make([]*model.User, 0, batchSize)
 		quizStatuses                                                         = make(map[string]*quiz.QuizStatus, batchSize)
@@ -228,6 +229,7 @@ func (m *miner) mine(ctx context.Context, workerNumber int64) {
 		userGlobalRanks = userGlobalRanks[:0]
 		referralsThatStoppedMining = referralsThatStoppedMining[:0]
 		coinDistributions = coinDistributions[:0]
+		usersThatStoppedMiningForDistribution = usersThatStoppedMiningForDistribution[:0]
 
 		for k := range t0Referrals {
 			delete(t0Referrals, k)
@@ -401,6 +403,14 @@ func (m *miner) mine(ctx context.Context, workerNumber int64) {
 							tMinus1Ref = tMinus1Referrals[updatedUser.IDTMinus1]
 						}
 					}
+				} else {
+					if updatedUser.MiningSessionSoloEndedAt.After(*now.Time) {
+						usersThatStoppedMiningForDistribution = append(usersThatStoppedMiningForDistribution, &userThatStoppedMiningForDistribution{
+							DeserializedUsersKey:                    usr.DeserializedUsersKey,
+							ReferralsCountChangeGuardUpdatedAtField: model.ReferralsCountChangeGuardUpdatedAtField{ReferralsCountChangeGuardUpdatedAt: now},
+							MiningSessionSoloEndedAtField:           model.MiningSessionSoloEndedAtField{MiningSessionSoloEndedAt: now},
+						})
+					}
 				}
 				userCoinDistributions, balanceDistributedForT0, balanceDistributedForTMinus1 := updatedUser.processEthereumCoinDistribution(startedCoinDistributionCollecting, now, t0Ref, tMinus1Ref)
 				coinDistributions = append(coinDistributions, userCoinDistributions...)
@@ -573,7 +583,7 @@ func (m *miner) mine(ctx context.Context, workerNumber int64) {
 
 		var pipeliner redis.Pipeliner
 		var transactional bool
-		if len(pendingBalancesForTMinus1)+len(pendingBalancesForT0)+len(balanceT1WelcomeBonusIncr)+len(balanceT1EthereumIncr)+len(balanceT2EthereumIncr)+len(t1ReferralsToIncrementActiveValue)+len(t2ReferralsToIncrementActiveValue)+len(referralsCountGuardOnlyUpdatedUsers)+len(t1ReferralsThatStoppedMining)+len(t2ReferralsThatStoppedMining)+len(extraBonusOnlyUpdatedUsers)+len(referralsUpdated)+len(userGlobalRanks) > 0 {
+		if len(pendingBalancesForTMinus1)+len(pendingBalancesForT0)+len(balanceT1WelcomeBonusIncr)+len(balanceT1EthereumIncr)+len(balanceT2EthereumIncr)+len(t1ReferralsToIncrementActiveValue)+len(t2ReferralsToIncrementActiveValue)+len(referralsCountGuardOnlyUpdatedUsers)+len(t1ReferralsThatStoppedMining)+len(t2ReferralsThatStoppedMining)+len(extraBonusOnlyUpdatedUsers)+len(referralsUpdated)+len(userGlobalRanks)+len(usersThatStoppedMiningForDistribution) > 0 {
 			pipeliner = m.db.TxPipeline()
 			transactional = true
 		} else {
@@ -664,6 +674,13 @@ func (m *miner) mine(ctx context.Context, workerNumber int64) {
 			for idTMinus1, amount := range pendingBalancesForTMinus1 {
 				if err := pipeliner.HIncrByFloat(reqCtx, model.SerializedUsersKey(idTMinus1), "balance_t2_pending", amount).Err(); err != nil {
 					return err
+				}
+			}
+			if cfg.Tenant == doctorXTenant {
+				for _, value := range usersThatStoppedMiningForDistribution {
+					if err := pipeliner.HSet(reqCtx, value.Key(), storage.SerializeValue(value)...).Err(); err != nil {
+						return err
+					}
 				}
 			}
 
