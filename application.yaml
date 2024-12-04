@@ -272,6 +272,7 @@ miner:
   t1LimitCount: 2
   welcomeBonusV2Amount: 500
   t1ReferralsAllowedWithoutAnyMiningBoostLevel: false
+  dryRunDistribution: false
 kyc/quiz:
   maxResetCount: 0
   maxAttemptsAllowed: 3

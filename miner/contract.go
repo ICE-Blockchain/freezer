@@ -232,5 +232,6 @@ type (
 		SlashingDaysCount                            int64   `yaml:"slashingDaysCount"`
 		Development                                  bool    `yaml:"development"`
 		T1ReferralsAllowedWithoutAnyMiningBoostLevel bool    `yaml:"t1ReferralsAllowedWithoutAnyMiningBoostLevel" mapstructure:"t1ReferralsAllowedWithoutAnyMiningBoostLevel"`
+		DryRunDistribution                           bool    `yaml:"dryRunDistribution" mapstructure:"dryRunDistribution"`
 	}
 )
