@@ -614,9 +614,9 @@ func (r *referral) isMandatoryFieldsSetForDistributionValid() bool {
 }
 
 func (r *referral) isVerified() bool {
-	return r.KYCStepPassedCorrectly(users.QuizKYCStep) && r.DistributionScenariosVerified
+	return r.KYCStepPassedCorrectly(users.QuizKYCStep)
 }
 
 func (u *user) isVerified() bool {
-	return u.KYCStepPassedCorrectly(users.QuizKYCStep) && u.DistributionScenariosVerified
+	return u.KYCStepPassedCorrectly(users.QuizKYCStep)
 }
