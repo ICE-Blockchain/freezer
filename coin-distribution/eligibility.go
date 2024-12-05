@@ -6,7 +6,7 @@ import (
 	"strings"
 	stdlibtime "time"
 
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/multiversx/mx-sdk-go/data"
 
 	"github.com/ice-blockchain/freezer/model"
 	"github.com/ice-blockchain/wintr/time"
@@ -95,6 +95,7 @@ func isEthereumAddressValid(ethAddress string) bool {
 	if ethAddress == "skip" {
 		return true
 	}
+	addr, err := data.NewAddressFromBech32String(ethAddress)
 
-	return common.IsHexAddress(ethAddress)
+	return err == nil && addr.IsValid()
 }
