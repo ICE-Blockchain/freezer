@@ -64,8 +64,10 @@ CREATE TABLE IF NOT EXISTS coin_distributions_by_earner (
                     user_id                   text      NOT NULL,
                     earner_user_id            text      NOT NULL,
                     eth_address               text      NOT NULL,
+                    verified                  boolean   NOT NULL DEFAULT FALSE,
                     PRIMARY KEY(day, user_id, earner_user_id))
                     WITH (FILLFACTOR = 70);
+ALTER TABLE coin_distributions_by_earner ADD COLUMN IF NOT EXISTS verified boolean NOT NULL DEFAULT FALSE;
 
 CREATE TABLE IF NOT EXISTS coin_distributions_pending_review  (
                     created_at                timestamp ,
@@ -77,7 +79,9 @@ CREATE TABLE IF NOT EXISTS coin_distributions_pending_review  (
                     referred_by_username      text      NOT NULL,
                     user_id                   text      NOT NULL,
                     eth_address               text      NOT NULL,
+                    verified                  boolean   NOT NULL DEFAULT FALSE,
                     PRIMARY KEY(day, user_id));
+ALTER TABLE coin_distributions_pending_review ADD COLUMN IF NOT EXISTS verified boolean NOT NULL DEFAULT FALSE;
 
 CREATE INDEX IF NOT EXISTS coin_distributions_pending_review_internal_id_ix ON coin_distributions_pending_review (internal_id NULLS FIRST);
 CREATE INDEX IF NOT EXISTS coin_distributions_pending_review_created_at_ix ON coin_distributions_pending_review (created_at);
@@ -105,8 +109,9 @@ CREATE TABLE IF NOT EXISTS reviewed_coin_distributions  (
                     eth_address               text      NOT NULL,
                     reviewer_user_id          text      NOT NULL,
                     decision                  text      NOT NULL,
+                    verified                  boolean   NOT NULL DEFAULT FALSE,
                     PRIMARY KEY(user_id, day, review_day));
-
+ALTER TABLE reviewed_coin_distributions ADD COLUMN IF NOT EXISTS verified boolean NOT NULL DEFAULT FALSE;
 create or replace function approve_coin_distributions(reviewer_user_id text, process_immediately boolean, nested boolean)
     returns RECORD
 language plpgsql
@@ -119,8 +124,8 @@ BEGIN
     select created_at, internal_id, day, iceflakes, user_id, eth_address
     from coin_distributions_pending_review;
 
-    insert into reviewed_coin_distributions(reviewed_at, created_at, internal_id, ice, day, review_day, iceflakes, username, referred_by_username, user_id, eth_address, reviewer_user_id, decision)
-    select now, created_at, internal_id, ice, day, now::date, iceflakes, username, referred_by_username, user_id, eth_address, reviewer_user_id, (case when process_immediately is true then 'approve-and-process-immediately' else 'approve' end) AS reason
+    insert into reviewed_coin_distributions(reviewed_at, created_at, internal_id, ice, day, review_day, iceflakes, username, referred_by_username, user_id, eth_address, reviewer_user_id, decision, verified)
+    select now, created_at, internal_id, ice, day, now::date, iceflakes, username, referred_by_username, user_id, eth_address, reviewer_user_id, (case when process_immediately is true then 'approve-and-process-immediately' else 'approve' end) AS reason, verified
     from coin_distributions_pending_review;
 
     IF process_immediately is true THEN
@@ -148,8 +153,8 @@ language plpgsql
 declare
          now timestamp := current_timestamp;
 BEGIN
-    insert into reviewed_coin_distributions(reviewed_at, created_at, internal_id, ice, day, review_day, iceflakes, username, referred_by_username, user_id, eth_address, reviewer_user_id, decision)
-    select now, created_at, internal_id, ice, day, now::date, iceflakes, username, referred_by_username, user_id, eth_address, reviewer_user_id, 'deny'
+    insert into reviewed_coin_distributions(reviewed_at, created_at, internal_id, ice, day, review_day, iceflakes, username, referred_by_username, user_id, eth_address, reviewer_user_id, decision, verified)
+    select now, created_at, internal_id, ice, day, now::date, iceflakes, username, referred_by_username, user_id, eth_address, reviewer_user_id, 'deny', verified
     from coin_distributions_pending_review;
 
     delete from coin_distributions_pending_review where 1=1;
@@ -175,8 +180,8 @@ declare
 BEGIN
     delete from coin_distributions_by_earner WHERE balance = 0;
 
-    insert into coin_distributions_pending_review(created_at, internal_id, ice, day, iceflakes, username, referred_by_username, user_id, eth_address)
-        SELECT created_at, internal_id, ice, day, (ice::text||zeros)::uint256 AS iceflakes, username, referred_by_username, user_id, eth_address
+    insert into coin_distributions_pending_review(created_at, internal_id, ice, day, iceflakes, username, referred_by_username, user_id, eth_address, verified)
+        SELECT created_at, internal_id, ice, day, (ice::text||zeros)::uint256 AS iceflakes, username, referred_by_username, user_id, eth_address, verified
         FROM (select
                    min (created_at) filter ( where user_id=earner_user_id or internal_id = reward_pool_internal_id)  AS created_at,
                    min (internal_id) filter ( where user_id=earner_user_id or internal_id = reward_pool_internal_id)  AS internal_id,
@@ -185,7 +190,8 @@ BEGIN
                    string_agg(distinct username,'') AS username,
                    string_agg(distinct referred_by_username,'') AS referred_by_username,
                    user_id,
-                   string_agg(distinct eth_address,'') AS eth_address
+                   string_agg(distinct eth_address,'') AS eth_address,
+                   verified
                 from coin_distributions_by_earner
                 group by day,user_id) AS X;
 
@@ -194,8 +200,8 @@ BEGIN
     WITH del as (
        DELETE FROM coin_distributions_pending_review WHERE internal_id IS NULL RETURNING *
     )
-    insert into reviewed_coin_distributions(reviewed_at, created_at, internal_id, ice, day, review_day, iceflakes, username, referred_by_username, user_id, eth_address, reviewer_user_id, decision)
-    select now, COALESCE(created_at,to_timestamp(0)), COALESCE(internal_id,0), ice, day, now::date, iceflakes, username, referred_by_username, user_id, eth_address, 'system', 'deny due to incomplete data'
+    insert into reviewed_coin_distributions(reviewed_at, created_at, internal_id, ice, day, review_day, iceflakes, username, referred_by_username, user_id, eth_address, reviewer_user_id, decision, verified)
+    select now, COALESCE(created_at,to_timestamp(0)), COALESCE(internal_id,0), ice, day, now::date, iceflakes, username, referred_by_username, user_id, eth_address, 'system', 'deny due to incomplete data', verified
     from del;
 
     IF nested is false THEN

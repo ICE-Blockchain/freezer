@@ -8,7 +8,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 
-	"github.com/ice-blockchain/eskimo/users"
 	"github.com/ice-blockchain/freezer/model"
 	"github.com/ice-blockchain/wintr/time"
 )
@@ -47,7 +46,6 @@ func IsEligibleForEthereumDistribution(
 	ethAddress, country string,
 	distributionDeniedCountries map[string]struct{},
 	now, collectingEndedAt, miningSessionSoloStartedAt, miningSessionSoloEndedAt, ethereumDistributionEndDate *time.Time,
-	kycState model.KYCState,
 	miningSessionDuration, ethereumDistributionFrequencyMin, ethereumDistributionFrequencyMax stdlibtime.Duration) bool {
 	var countryAllowed bool
 	if _, countryDenied := distributionDeniedCountries[strings.ToLower(country)]; len(distributionDeniedCountries) == 0 || (country != "" && !countryDenied) {
@@ -59,8 +57,7 @@ func IsEligibleForEthereumDistribution(
 		!miningSessionSoloEndedAt.IsNil() && (miningSessionSoloEndedAt.After(*collectingEndedAt.Time) || AllowInactiveUsers) &&
 		isEthereumAddressValid(ethAddress) &&
 		((minEthereumDistributionICEBalanceRequired > 0 && distributedBalance >= minEthereumDistributionICEBalanceRequired) || (minEthereumDistributionICEBalanceRequired == 0 && distributedBalance > 0)) && //nolint:lll // .
-		model.CalculateMiningStreak(now, miningSessionSoloStartedAt, miningSessionSoloEndedAt, miningSessionDuration) >= minMiningStreaksRequired &&
-		kycState.KYCStepPassedCorrectly(users.QuizKYCStep)
+		model.CalculateMiningStreak(now, miningSessionSoloStartedAt, miningSessionSoloEndedAt, miningSessionDuration) >= minMiningStreaksRequired
 }
 
 func IsEligibleForEthereumDistributionNow(id int64,

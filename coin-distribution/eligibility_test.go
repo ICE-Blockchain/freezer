@@ -89,8 +89,6 @@ func TestFinalDistribution(t *testing.T) {
 	assert.False(t, IsEligibleForEthereumDistributionNow(5, now, userAlreadyProcessedLastEthereumProcessedAt, coinDistributionStartDate, lastCollectingProcessedAt, 24*stdlibtime.Hour, 24*28*stdlibtime.Hour))
 
 	balanceRequired := float64(0)
-	var kycPassed model.KYCState = buildKYC(true, now)
-	var kycNotPassed model.KYCState = buildKYC(false, now)
 	var collectingEndedAt *time.Time
 	if lastCollectingProcessedAt.IsNil() {
 		collectingEndedAt = time.New(time.Now().Add(-1 * stdlibtime.Millisecond).Add(20 * stdlibtime.Minute))
@@ -98,16 +96,16 @@ func TestFinalDistribution(t *testing.T) {
 	miningSessionDuration := 24 * stdlibtime.Hour
 	activeMiningSessionStarted := time.New(stdlibtime.Date(2024, 2, 25, 0, 0, 0, 0, stdlibtime.UTC))
 	nonActiveMiningSessionEnded := time.New(stdlibtime.Date(2024, 2, 26, 0, 0, 0, 0, stdlibtime.UTC))
-	assert.True(t, IsEligibleForEthereumDistribution(uint64(0), 0.1, balanceRequired, "skip", "US", make(map[string]struct{}), now, collectingEndedAt, activeMiningSessionStarted, nonActiveMiningSessionEnded, coinDistributionEndDate, kycPassed, miningSessionDuration, 24*stdlibtime.Hour, 24*28*stdlibtime.Hour))
-	assert.True(t, IsEligibleForEthereumDistribution(uint64(0), 1, balanceRequired, "skip", "US", make(map[string]struct{}), now, collectingEndedAt, activeMiningSessionStarted, nonActiveMiningSessionEnded, coinDistributionEndDate, kycNotPassed, miningSessionDuration, 24*stdlibtime.Hour, 24*28*stdlibtime.Hour))
-	assert.False(t, IsEligibleForEthereumDistribution(uint64(0), 1, balanceRequired, "bogusInvalidAddress", "US", make(map[string]struct{}), now, collectingEndedAt, activeMiningSessionStarted, nonActiveMiningSessionEnded, coinDistributionEndDate, kycPassed, miningSessionDuration, 24*stdlibtime.Hour, 24*28*stdlibtime.Hour))
-	assert.False(t, IsEligibleForEthereumDistribution(uint64(0), 1, balanceRequired, "", "US", make(map[string]struct{}), now, collectingEndedAt, activeMiningSessionStarted, nonActiveMiningSessionEnded, coinDistributionEndDate, kycPassed, miningSessionDuration, 24*stdlibtime.Hour, 24*28*stdlibtime.Hour))
+	assert.True(t, IsEligibleForEthereumDistribution(uint64(0), 0.1, balanceRequired, "skip", "US", make(map[string]struct{}), now, collectingEndedAt, activeMiningSessionStarted, nonActiveMiningSessionEnded, coinDistributionEndDate, miningSessionDuration, 24*stdlibtime.Hour, 24*28*stdlibtime.Hour))
+	assert.True(t, IsEligibleForEthereumDistribution(uint64(0), 1, balanceRequired, "skip", "US", make(map[string]struct{}), now, collectingEndedAt, activeMiningSessionStarted, nonActiveMiningSessionEnded, coinDistributionEndDate, miningSessionDuration, 24*stdlibtime.Hour, 24*28*stdlibtime.Hour))
+	assert.False(t, IsEligibleForEthereumDistribution(uint64(0), 1, balanceRequired, "bogusInvalidAddress", "US", make(map[string]struct{}), now, collectingEndedAt, activeMiningSessionStarted, nonActiveMiningSessionEnded, coinDistributionEndDate, miningSessionDuration, 24*stdlibtime.Hour, 24*28*stdlibtime.Hour))
+	assert.False(t, IsEligibleForEthereumDistribution(uint64(0), 1, balanceRequired, "", "US", make(map[string]struct{}), now, collectingEndedAt, activeMiningSessionStarted, nonActiveMiningSessionEnded, coinDistributionEndDate, miningSessionDuration, 24*stdlibtime.Hour, 24*28*stdlibtime.Hour))
 
 	activeMiningSessionEnded := time.New(stdlibtime.Date(2024, 2, 29, 0, 0, 0, 0, stdlibtime.UTC))
-	assert.True(t, IsEligibleForEthereumDistribution(uint64(0), 0.1, balanceRequired, "skip", "US", make(map[string]struct{}), now, collectingEndedAt, activeMiningSessionStarted, activeMiningSessionEnded, coinDistributionEndDate, kycPassed, miningSessionDuration, 24*stdlibtime.Hour, 24*28*stdlibtime.Hour))
-	assert.True(t, IsEligibleForEthereumDistribution(uint64(0), 1, balanceRequired, "skip", "US", make(map[string]struct{}), now, collectingEndedAt, activeMiningSessionStarted, activeMiningSessionEnded, coinDistributionEndDate, kycNotPassed, miningSessionDuration, 24*stdlibtime.Hour, 24*28*stdlibtime.Hour))
-	assert.False(t, IsEligibleForEthereumDistribution(uint64(0), 1, balanceRequired, "bogusInvalidAddress", "US", make(map[string]struct{}), now, collectingEndedAt, activeMiningSessionEnded, nonActiveMiningSessionEnded, coinDistributionEndDate, kycPassed, miningSessionDuration, 24*stdlibtime.Hour, 24*28*stdlibtime.Hour))
-	assert.False(t, IsEligibleForEthereumDistribution(uint64(0), 1, balanceRequired, "", "US", make(map[string]struct{}), now, collectingEndedAt, activeMiningSessionStarted, activeMiningSessionEnded, coinDistributionEndDate, kycPassed, miningSessionDuration, 24*stdlibtime.Hour, 24*28*stdlibtime.Hour))
+	assert.True(t, IsEligibleForEthereumDistribution(uint64(0), 0.1, balanceRequired, "skip", "US", make(map[string]struct{}), now, collectingEndedAt, activeMiningSessionStarted, activeMiningSessionEnded, coinDistributionEndDate, miningSessionDuration, 24*stdlibtime.Hour, 24*28*stdlibtime.Hour))
+	assert.True(t, IsEligibleForEthereumDistribution(uint64(0), 1, balanceRequired, "skip", "US", make(map[string]struct{}), now, collectingEndedAt, activeMiningSessionStarted, activeMiningSessionEnded, coinDistributionEndDate, miningSessionDuration, 24*stdlibtime.Hour, 24*28*stdlibtime.Hour))
+	assert.False(t, IsEligibleForEthereumDistribution(uint64(0), 1, balanceRequired, "bogusInvalidAddress", "US", make(map[string]struct{}), now, collectingEndedAt, activeMiningSessionEnded, nonActiveMiningSessionEnded, coinDistributionEndDate, miningSessionDuration, 24*stdlibtime.Hour, 24*28*stdlibtime.Hour))
+	assert.False(t, IsEligibleForEthereumDistribution(uint64(0), 1, balanceRequired, "", "US", make(map[string]struct{}), now, collectingEndedAt, activeMiningSessionStarted, activeMiningSessionEnded, coinDistributionEndDate, miningSessionDuration, 24*stdlibtime.Hour, 24*28*stdlibtime.Hour))
 
 	assert.Equal(t, float64(0), CalculateEthereumDistributionICEBalance(0, 24*stdlibtime.Hour, 24*28*stdlibtime.Hour, now, coinDistributionEndDate))
 	assert.Equal(t, float64(100), CalculateEthereumDistributionICEBalance(100, 24*stdlibtime.Hour, 24*28*stdlibtime.Hour, now, coinDistributionEndDate))

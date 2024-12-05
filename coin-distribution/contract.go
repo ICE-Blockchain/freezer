@@ -77,6 +77,7 @@ type (
 		EthAddress         string     `json:"ethAddress" swaggertype:"string" example:"0x43...."`
 		Ice                float64    `json:"ice" db:"-" example:"1000"`
 		IceInternal        int64      `json:"-" db:"ice" swaggerignore:"true"`
+		Verified           bool       `json:"verified" db:"verified" swaggerignore:"true"`
 	}
 
 	ByEarnerForReview struct {
@@ -88,6 +89,7 @@ type (
 		EthAddress         string
 		InternalID         int64
 		Balance            float64
+		Verified           bool
 	}
 )
 

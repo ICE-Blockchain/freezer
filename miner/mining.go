@@ -17,7 +17,7 @@ func mine(now *time.Time, usr *user, t0Ref, tMinus1Ref *referral) (updatedUser *
 	}
 	clonedUser1 := *usr
 	updatedUser = &clonedUser1
-	if cfg.Tenant == doctorXTenant {
+	if isTenantInDistributionMode() {
 		return updatedUser, false, false, 0, 0
 	}
 

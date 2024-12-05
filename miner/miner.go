@@ -19,6 +19,7 @@ import (
 	"github.com/redis/go-redis/v9"
 
 	"github.com/ice-blockchain/eskimo/kyc/quiz"
+	"github.com/ice-blockchain/eskimo/users"
 	balancesynchronizer "github.com/ice-blockchain/freezer/balance-synchronizer"
 	dwh "github.com/ice-blockchain/freezer/bookkeeper/storage"
 	coindistribution "github.com/ice-blockchain/freezer/coin-distribution"
@@ -74,6 +75,9 @@ func MustStartMining(ctx context.Context, cancel context.CancelFunc) Client {
 	mi.cancel = cancel
 	mi.extraBonusStartDate = extrabonusnotifier.MustGetExtraBonusStartDate(ctx, mi.db)
 	mi.mustInitCoinDistributionCollector(ctx)
+	if isTenantInDistributionMode() {
+		mi.usersRepository = users.New(context.Background(), nil)
+	}
 
 	for workerNumber := int64(0); workerNumber < cfg.Workers; workerNumber++ {
 		go func(wn int64) {
@@ -90,13 +94,18 @@ func (m *miner) Close() error {
 	m.wg.Wait()
 	<-m.stopCoinDistributionCollectionWorkerManager
 
-	return multierror.Append(
+	errs := multierror.Append(
 		errors.Wrap(m.mb.Close(), "failed to close mb"),
 		errors.Wrap(m.db.Close(), "failed to close db"),
 		errors.Wrap(m.dwhClient.Close(), "failed to close dwh"),
 		errors.Wrap(m.coinDistributionRepository.Close(), "failed to close coinDistributionRepository"),
 		//errors.Wrap(m.quizRepository.Close(), "failed to close quizClient"),
-	).ErrorOrNil()
+	)
+	if isTenantInDistributionMode() {
+		errs = multierror.Append(errs, errors.Wrap(m.usersRepository.Close(), "failed to close usersRepository"))
+	}
+
+	return errs.ErrorOrNil()
 }
 
 func (m *miner) CheckHealth(ctx context.Context) error {
@@ -156,36 +165,37 @@ func (m *miner) mine(ctx context.Context, workerNumber int64) {
 		log.Error(dwhClient.Close())
 	}()
 	var (
-		batchNumber                                                          int64
-		totalBatches                                                         uint64
-		iteration                                                            uint64
-		now, lastIterationStartedAt                                          = time.Now(), time.Now()
-		workers                                                              = cfg.Workers
-		batchSize                                                            = cfg.BatchSize
-		userKeys, userHistoryKeys, referralKeys, syncQuizUserIDs             = make([]string, 0, batchSize), make([]string, 0, batchSize), make([]string, 0, 2*batchSize), make([]string, 0, batchSize)
-		userResults, referralResults                                         = make([]*user, 0, batchSize), make([]*referral, 0, 2*batchSize)
-		t0Referrals, tMinus1Referrals                                        = make(map[int64]*referral, batchSize), make(map[int64]*referral, batchSize)
-		t1ReferralsToIncrementActiveValue, t2ReferralsToIncrementActiveValue = make(map[int64]int32, batchSize), make(map[int64]int32, batchSize)
-		t1ReferralsThatStoppedMining, t2ReferralsThatStoppedMining           = make(map[int64]uint32, batchSize), make(map[int64]uint32, batchSize)
-		balanceT1EthereumIncr, balanceT2EthereumIncr                         = make(map[int64]float64, batchSize), make(map[int64]float64, batchSize)
-		balanceT1WelcomeBonusIncr                                            = make(map[int64]float64, batchSize)
-		pendingBalancesForTMinus1, pendingBalancesForT0                      = make(map[int64]float64, batchSize), make(map[int64]float64, batchSize)
-		referralsThatStoppedMining                                           = make([]*referralThatStoppedMining, 0, batchSize)
-		coinDistributions                                                    = make([]*coindistribution.ByEarnerForReview, 0, 4*batchSize)
-		msgResponder                                                         = make(chan error, 3*batchSize)
-		msgs                                                                 = make([]*messagebroker.Message, 0, 3*batchSize)
-		errs                                                                 = make([]error, 0, 3*batchSize)
-		updatedUsers                                                         = make([]*UpdatedUser, 0, batchSize)
-		extraBonusOnlyUpdatedUsers                                           = make([]*extrabonusnotifier.UpdatedUser, 0, batchSize)
-		referralsCountGuardOnlyUpdatedUsers                                  = make([]*referralCountGuardUpdatedUser, 0, batchSize)
-		usersThatStoppedMiningForDistribution                                = make([]*userThatStoppedMiningForDistribution, 0, batchSize)
-		referralsUpdated                                                     = make([]*referralUpdated, 0, batchSize)
-		histories                                                            = make([]*model.User, 0, batchSize)
-		quizStatuses                                                         = make(map[string]*quiz.QuizStatus, batchSize)
-		userGlobalRanks                                                      = make([]redis.Z, 0, batchSize)
-		historyColumns, historyInsertMetadata                                = dwh.InsertDDL(int(batchSize))
-		shouldSynchronizeBalanceFunc                                         = func(batchNumberArg uint64) bool { return false }
-		startedCoinDistributionCollecting                                    = isCoinDistributionCollectorEnabled(now)
+		batchNumber                                                                                         int64
+		totalBatches                                                                                        uint64
+		iteration                                                                                           uint64
+		now, lastIterationStartedAt                                                                         = time.Now(), time.Now()
+		workers                                                                                             = cfg.Workers
+		batchSize                                                                                           = cfg.BatchSize
+		userKeys, userHistoryKeys, referralKeys, syncQuizUserIDs, syncMandatoryUserFieldsForDistributionIDs = make([]string, 0, batchSize), make([]string, 0, batchSize), make([]string, 0, 2*batchSize), make([]string, 0, batchSize), make([]string, 0, batchSize)
+		userResults, referralResults                                                                        = make([]*user, 0, batchSize), make([]*referral, 0, 2*batchSize)
+		t0Referrals, tMinus1Referrals                                                                       = make(map[int64]*referral, batchSize), make(map[int64]*referral, batchSize)
+		t1ReferralsToIncrementActiveValue, t2ReferralsToIncrementActiveValue                                = make(map[int64]int32, batchSize), make(map[int64]int32, batchSize)
+		t1ReferralsThatStoppedMining, t2ReferralsThatStoppedMining                                          = make(map[int64]uint32, batchSize), make(map[int64]uint32, batchSize)
+		balanceT1EthereumIncr, balanceT2EthereumIncr                                                        = make(map[int64]float64, batchSize), make(map[int64]float64, batchSize)
+		balanceT1WelcomeBonusIncr                                                                           = make(map[int64]float64, batchSize)
+		pendingBalancesForTMinus1, pendingBalancesForT0                                                     = make(map[int64]float64, batchSize), make(map[int64]float64, batchSize)
+		referralsThatStoppedMining                                                                          = make([]*referralThatStoppedMining, 0, batchSize)
+		coinDistributions                                                                                   = make([]*coindistribution.ByEarnerForReview, 0, 4*batchSize)
+		msgResponder                                                                                        = make(chan error, 3*batchSize)
+		msgs                                                                                                = make([]*messagebroker.Message, 0, 3*batchSize)
+		errs                                                                                                = make([]error, 0, 3*batchSize)
+		updatedUsers                                                                                        = make([]*UpdatedUser, 0, batchSize)
+		extraBonusOnlyUpdatedUsers                                                                          = make([]*extrabonusnotifier.UpdatedUser, 0, batchSize)
+		referralsCountGuardOnlyUpdatedUsers                                                                 = make([]*referralCountGuardUpdatedUser, 0, batchSize)
+		usersThatStoppedMiningForDistribution                                                               = make([]*userThatStoppedMiningForDistribution, 0, batchSize)
+		referralsUpdated                                                                                    = make([]*referralUpdated, 0, batchSize)
+		histories                                                                                           = make([]*model.User, 0, batchSize)
+		quizStatuses                                                                                        = make(map[string]*quiz.QuizStatus, batchSize)
+		mandatoryUserFieldsForDistributionProfileList                                                       = make(map[string]*users.MandatoryForDistributionFieldsProfile, batchSize)
+		userGlobalRanks                                                                                     = make([]redis.Z, 0, batchSize)
+		historyColumns, historyInsertMetadata                                                               = dwh.InsertDDL(int(batchSize))
+		shouldSynchronizeBalanceFunc                                                                        = func(batchNumberArg uint64) bool { return false }
+		startedCoinDistributionCollecting                                                                   = isCoinDistributionCollectorEnabled(now)
 	)
 	if startedCoinDistributionCollecting {
 		m.coinDistributionStartedSignaler <- struct{}{}
@@ -220,6 +230,7 @@ func (m *miner) mine(ctx context.Context, workerNumber int64) {
 		userKeys, userHistoryKeys, referralKeys = userKeys[:0], userHistoryKeys[:0], referralKeys[:0]
 		userResults, referralResults = userResults[:0], referralResults[:0]
 		syncQuizUserIDs = syncQuizUserIDs[:0]
+		syncMandatoryUserFieldsForDistributionIDs = syncMandatoryUserFieldsForDistributionIDs[:0]
 		msgs, errs = msgs[:0], errs[:0]
 		updatedUsers = updatedUsers[:0]
 		extraBonusOnlyUpdatedUsers = extraBonusOnlyUpdatedUsers[:0]
@@ -266,6 +277,9 @@ func (m *miner) mine(ctx context.Context, workerNumber int64) {
 		}
 		for k := range quizStatuses {
 			delete(quizStatuses, k)
+		}
+		for k := range mandatoryUserFieldsForDistributionProfileList {
+			delete(mandatoryUserFieldsForDistributionProfileList, k)
 		}
 	}
 	for ctx.Err() == nil {
@@ -374,9 +388,12 @@ func (m *miner) mine(ctx context.Context, workerNumber int64) {
 				syncQuizUserIDs = append(syncQuizUserIDs, usr.UserID)
 				userHistoryKeys = append(userHistoryKeys, usr.Key())
 			}
+			if isTenantInDistributionMode() && !usr.isMandatoryFieldsSetForDistributionValid() && !usr.MiningSessionSoloStartedAt.IsNil() {
+				syncMandatoryUserFieldsForDistributionIDs = append(syncMandatoryUserFieldsForDistributionIDs, usr.UserID)
+			}
 
 			if updatedUser != nil {
-				if cfg.Tenant != doctorXTenant {
+				if !isTenantInDistributionMode() {
 					if userStoppedMining := didUserStoppedMining(now, usr); userStoppedMining != nil {
 						referralsCountGuardOnlyUpdatedUsers = append(referralsCountGuardOnlyUpdatedUsers, userStoppedMining)
 					}
@@ -420,7 +437,7 @@ func (m *miner) mine(ctx context.Context, workerNumber int64) {
 				if balanceDistributedForTMinus1 > 0 {
 					balanceT2EthereumIncr[tMinus1Ref.ID] += balanceDistributedForTMinus1
 				}
-				if cfg.Tenant != doctorXTenant {
+				if !isTenantInDistributionMode() {
 					if tMinus1Ref != nil && tMinus1Ref.ID != 0 && pendingAmountForTMinus1 != 0 {
 						pendingBalancesForTMinus1[tMinus1Ref.ID] += pendingAmountForTMinus1
 					}
@@ -437,7 +454,7 @@ func (m *miner) mine(ctx context.Context, workerNumber int64) {
 				}
 				updatedUsers = append(updatedUsers, &updatedUser.UpdatedUser)
 			} else {
-				if cfg.Tenant != doctorXTenant {
+				if !isTenantInDistributionMode() {
 					if updUsr := updateT0AndTMinus1ReferralsForUserHasNeverMined(usr); updUsr != nil {
 						referralsUpdated = append(referralsUpdated, updUsr)
 						if t0Ref != nil && t0Ref.ID != 0 && usr.ActiveT1Referrals > 0 {
@@ -446,7 +463,7 @@ func (m *miner) mine(ctx context.Context, workerNumber int64) {
 					}
 				}
 			}
-			if cfg.Tenant != doctorXTenant {
+			if !isTenantInDistributionMode() {
 				totalStandardBalance, totalPreStakingBalance := usr.BalanceTotalStandard, usr.BalanceTotalPreStaking
 				if updatedUser != nil {
 					totalStandardBalance, totalPreStakingBalance = updatedUser.BalanceTotalStandard, updatedUser.BalanceTotalPreStaking
@@ -506,7 +523,7 @@ func (m *miner) mine(ctx context.Context, workerNumber int64) {
 		}
 
 		/******************************************************************************************************************************************************
-			6. Syncing quiz state
+			6. Syncing quiz state/syncing mandatory user fields for distribution
 		******************************************************************************************************************************************************/
 		before = time.Now()
 		if false && (len(syncQuizUserIDs) > 0 && len(histories) > 0) {
@@ -528,6 +545,22 @@ func (m *miner) mine(ctx context.Context, workerNumber int64) {
 						histories[i].KYCQuizCompleted = quizSync.KYCQuizCompleted
 					}
 				}
+				go m.telemetry.collectElapsed(6, *before.Time)
+			}
+		}
+		if len(syncMandatoryUserFieldsForDistributionIDs) > 0 {
+			reqCtx, reqCancel = context.WithTimeout(context.Background(), requestDeadline)
+			var err error
+			mandatoryUserFieldsForDistributionProfileList, err = m.usersRepository.GetMandatoryForDistributionUserFieldsByIDList(reqCtx, syncMandatoryUserFieldsForDistributionIDs)
+			if err != nil {
+				log.Error(errors.Wrapf(err, "[miner] failed to sync mandatory fields for distribution (%v entries) batchNumber:%v,workerNumber:%v", len(syncMandatoryUserFieldsForDistributionIDs), batchNumber, workerNumber))
+				reqCancel()
+				resetVars(false)
+
+				continue
+			}
+			reqCancel()
+			if len(mandatoryUserFieldsForDistributionProfileList) > 0 {
 				go m.telemetry.collectElapsed(6, *before.Time)
 			}
 		}
@@ -625,6 +658,15 @@ func (m *miner) mine(ctx context.Context, workerNumber int64) {
 					value.KYCQuizDisabled = &disabled
 					value.KYCQuizCompleted = &completed
 				}
+				if mandatoryFieldsSync, hasMandatoryFieldsSync := mandatoryUserFieldsForDistributionProfileList[value.UserID]; hasMandatoryFieldsSync && mandatoryFieldsSync != nil {
+					value.PhoneNumber = mandatoryFieldsSync.PhoneNumber
+					value.Email = mandatoryFieldsSync.Email
+					value.TelegramUserID = mandatoryFieldsSync.TelegramUserID
+					value.TelegramBotID = mandatoryFieldsSync.TelegramBotID
+					if mandatoryFieldsSync.DistributionScenariosVerified != nil {
+						value.DistributionScenariosVerified = *mandatoryFieldsSync.DistributionScenariosVerified
+					}
+				}
 				if err := pipeliner.HSet(reqCtx, value.Key(), storage.SerializeValue(value)...).Err(); err != nil {
 					return err
 				}
@@ -676,7 +718,7 @@ func (m *miner) mine(ctx context.Context, workerNumber int64) {
 					return err
 				}
 			}
-			if cfg.Tenant == doctorXTenant {
+			if isTenantInDistributionMode() {
 				for _, value := range usersThatStoppedMiningForDistribution {
 					if err := pipeliner.HSet(reqCtx, value.Key(), storage.SerializeValue(value)...).Err(); err != nil {
 						return err
@@ -796,4 +838,8 @@ func didUserStoppedMining(now *time.Time, before *user) *referralCountGuardUpdat
 	}
 
 	return nil
+}
+
+func isTenantInDistributionMode() bool {
+	return cfg.Tenant == doctorXTenant
 }
