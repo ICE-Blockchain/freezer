@@ -147,7 +147,7 @@ func MustStartCoinDistribution(ctx context.Context, _ context.CancelFunc) Client
 	cd := mustCreateCoinDistributionFromConfig(ctx, &cfg, eth)
 	cd.MustStart(ctx, nil)
 
-	go startPrepareCoinDistributionsForReviewMonitor(ctx, cd.DB)
+	go cd.repository.StartPrepareCoinDistributionsForReviewMonitor(ctx)
 
 	return cd
 }
@@ -155,9 +155,10 @@ func MustStartCoinDistribution(ctx context.Context, _ context.CancelFunc) Client
 func mustCreateCoinDistributionFromConfig(ctx context.Context, conf *config, ethClient ethClient) *coinDistributer {
 	db := storage.MustConnect(ctx, ddl, applicationYamlKey)
 	cd := &coinDistributer{
-		Client:    ethClient,
-		Processor: newCoinProcessor(ethClient, db, conf),
-		DB:        db,
+		Client:     ethClient,
+		Processor:  newCoinProcessor(ethClient, db, conf),
+		DB:         db,
+		repository: NewRepository(ctx, nil),
 	}
 
 	return cd
@@ -172,6 +173,7 @@ func (cd *coinDistributer) Close() error {
 		errors.Wrap(cd.Processor.Close(), "failed to close processor"),
 		errors.Wrap(cd.Client.Close(), "failed to close eth client"),
 		errors.Wrap(cd.DB.Close(), "failed to close db"),
+		errors.Wrap(cd.repository.Close(), "failed to close repository"),
 	).ErrorOrNil()
 }
 

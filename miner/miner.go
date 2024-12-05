@@ -77,6 +77,7 @@ func MustStartMining(ctx context.Context, cancel context.CancelFunc) Client {
 	mi.mustInitCoinDistributionCollector(ctx)
 	if isTenantInDistributionMode() {
 		mi.usersRepository = users.New(context.Background(), nil)
+		go mi.coinDistributionRepository.StartPrepareCoinDistributionsForReviewMonitor(ctx)
 	}
 
 	for workerNumber := int64(0); workerNumber < cfg.Workers; workerNumber++ {

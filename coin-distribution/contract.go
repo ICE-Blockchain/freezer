@@ -37,6 +37,7 @@ type (
 		NotifyCoinDistributionCollectionCycleEnded(ctx context.Context) error
 		GetCollectorSettings(ctx context.Context) (*CollectorSettings, error)
 		CollectCoinDistributionsForReview(ctx context.Context, records []*ByEarnerForReview) error
+		StartPrepareCoinDistributionsForReviewMonitor(ctx context.Context)
 	}
 	CollectorSettings struct {
 		DeniedCountries          map[string]struct{}
@@ -124,6 +125,8 @@ const (
 	configKeyCoinDistributerMsgOnline   = "coin_distributer_msg_sent_online_date"
 	configKeyCoinDistributerMsgOffline  = "coin_distributer_msg_sent_offline_date"
 	configKeyCoinDistributerMsgFinished = "coin_distributer_msg_sent_finished_date"
+
+	doctorXTenant = "doctorx"
 )
 
 // .
@@ -191,9 +194,10 @@ type (
 		AirDropper airDropper
 	}
 	coinDistributer struct {
-		Client    ethClient
-		DB        *storage.DB
-		Processor *coinProcessor
+		Client     ethClient
+		DB         *storage.DB
+		Processor  *coinProcessor
+		repository Repository
 	}
 	repository struct {
 		cfg *config

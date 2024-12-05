@@ -28,9 +28,10 @@ func NewRepository(ctx context.Context, _ context.CancelFunc) Repository {
 	if localCfg.ReviewURL == "" {
 		log.Panic("`review-url` is missing")
 	}
+	db := storage.MustConnect(ctx, ddl, applicationYamlKey)
 
 	return &repository{
-		db:  storage.MustConnect(ctx, ddl, applicationYamlKey),
+		db:  db,
 		cfg: &localCfg,
 	}
 }
@@ -379,7 +380,7 @@ func tryPrepareCoinDistributionsForReview(ctx context.Context, db *storage.DB) e
 	})
 }
 
-func startPrepareCoinDistributionsForReviewMonitor(ctx context.Context, db *storage.DB) {
+func (r *repository) StartPrepareCoinDistributionsForReviewMonitor(ctx context.Context) {
 	ticker := stdlibtime.NewTicker(30 * stdlibtime.Second) //nolint:gomnd // .
 	defer ticker.Stop()
 
@@ -387,7 +388,7 @@ func startPrepareCoinDistributionsForReviewMonitor(ctx context.Context, db *stor
 		select {
 		case <-ticker.C:
 			reqCtx, cancel := context.WithTimeout(ctx, 10*stdlibtime.Minute) //nolint:gomnd // .
-			log.Error(errors.Wrap(tryPrepareCoinDistributionsForReview(reqCtx, db), "failed to tryPrepareCoinDistributionsForReview"))
+			log.Error(errors.Wrap(tryPrepareCoinDistributionsForReview(reqCtx, r.db), "failed to tryPrepareCoinDistributionsForReview"))
 			cancel()
 		case <-ctx.Done():
 			return
