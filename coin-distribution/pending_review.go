@@ -16,7 +16,7 @@ import (
 	"github.com/ice-blockchain/wintr/time"
 )
 
-func NewRepository(ctx context.Context, _ context.CancelFunc, tenantName string) Repository {
+func NewRepository(ctx context.Context, _ context.CancelFunc) Repository {
 	var localCfg config
 	appcfg.MustLoadFromKey(applicationYamlKey, &localCfg)
 	if localCfg.AlertSlackWebhook == "" {
@@ -29,9 +29,6 @@ func NewRepository(ctx context.Context, _ context.CancelFunc, tenantName string)
 		log.Panic("`review-url` is missing")
 	}
 	db := storage.MustConnect(ctx, ddl, applicationYamlKey)
-	if tenantName == doctorXTenant {
-		go startPrepareCoinDistributionsForReviewMonitor(ctx, db)
-	}
 
 	return &repository{
 		db:  db,
@@ -383,7 +380,7 @@ func tryPrepareCoinDistributionsForReview(ctx context.Context, db *storage.DB) e
 	})
 }
 
-func startPrepareCoinDistributionsForReviewMonitor(ctx context.Context, db *storage.DB) {
+func (r *repository) StartPrepareCoinDistributionsForReviewMonitor(ctx context.Context) {
 	ticker := stdlibtime.NewTicker(30 * stdlibtime.Second) //nolint:gomnd // .
 	defer ticker.Stop()
 
@@ -391,7 +388,7 @@ func startPrepareCoinDistributionsForReviewMonitor(ctx context.Context, db *stor
 		select {
 		case <-ticker.C:
 			reqCtx, cancel := context.WithTimeout(ctx, 10*stdlibtime.Minute) //nolint:gomnd // .
-			log.Error(errors.Wrap(tryPrepareCoinDistributionsForReview(reqCtx, db), "failed to tryPrepareCoinDistributionsForReview"))
+			log.Error(errors.Wrap(tryPrepareCoinDistributionsForReview(reqCtx, r.db), "failed to tryPrepareCoinDistributionsForReview"))
 			cancel()
 		case <-ctx.Done():
 			return

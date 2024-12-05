@@ -62,7 +62,7 @@ func init() {
 
 func MustStartMining(ctx context.Context, cancel context.CancelFunc) Client {
 	mi := &miner{
-		coinDistributionRepository: coindistribution.NewRepository(context.Background(), func() {}, cfg.Tenant),
+		coinDistributionRepository: coindistribution.NewRepository(context.Background(), func() {}),
 		mb:                         messagebroker.MustConnect(context.Background(), parentApplicationYamlKey),
 		db:                         storage.MustConnect(context.Background(), parentApplicationYamlKey, int(cfg.Workers)),
 		dwhClient:                  dwh.MustConnect(context.Background(), applicationYamlKey),
@@ -77,6 +77,7 @@ func MustStartMining(ctx context.Context, cancel context.CancelFunc) Client {
 	mi.mustInitCoinDistributionCollector(ctx)
 	if isTenantInDistributionMode() {
 		mi.usersRepository = users.New(context.Background(), nil)
+		go mi.coinDistributionRepository.StartPrepareCoinDistributionsForReviewMonitor(ctx)
 	}
 
 	for workerNumber := int64(0); workerNumber < cfg.Workers; workerNumber++ {
