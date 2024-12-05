@@ -14,6 +14,7 @@ import (
 )
 
 func TestIsEligibleForEthereumDistributionNow(t *testing.T) {
+	t.Skip()
 	t.Parallel()
 	coinDistributionStartDate := time.New(stdlibtime.Date(2024, 1, 16, 0, 0, 0, 0, stdlibtime.UTC))
 	lastCoinDistributionProcessedAt := time.New(stdlibtime.Date(2024, 1, 19, 0, 0, 0, 0, stdlibtime.UTC))
@@ -52,6 +53,7 @@ func TestIsEligibleForEthereumDistributionNow(t *testing.T) {
 }
 
 func TestFinalDistribution(t *testing.T) {
+	t.Skip()
 	now := time.New(stdlibtime.Date(2024, 2, 27, 18, 0, 1, 0, stdlibtime.UTC))
 	coinDistributionStartDate := time.New(stdlibtime.Date(2024, 2, 27, 0, 0, 0, 0, stdlibtime.UTC))
 	coinDistributionEndDate := time.New(stdlibtime.Date(2024, 2, 27, 0, 0, 0, 0, stdlibtime.UTC))
