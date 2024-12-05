@@ -193,7 +193,7 @@ BEGIN
                    string_agg(distinct eth_address,'') AS eth_address,
                    verified
                 from coin_distributions_by_earner
-                group by day,user_id) AS X;
+                group by day,user_id,verified) AS X;
 
     delete from coin_distributions_by_earner where 1=1;
 

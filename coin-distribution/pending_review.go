@@ -16,7 +16,7 @@ import (
 	"github.com/ice-blockchain/wintr/time"
 )
 
-func NewRepository(ctx context.Context, _ context.CancelFunc) Repository {
+func NewRepository(ctx context.Context, _ context.CancelFunc, tenantName string) Repository {
 	var localCfg config
 	appcfg.MustLoadFromKey(applicationYamlKey, &localCfg)
 	if localCfg.AlertSlackWebhook == "" {
@@ -28,9 +28,13 @@ func NewRepository(ctx context.Context, _ context.CancelFunc) Repository {
 	if localCfg.ReviewURL == "" {
 		log.Panic("`review-url` is missing")
 	}
+	db := storage.MustConnect(ctx, ddl, applicationYamlKey)
+	if tenantName == doctorXTenant {
+		go startPrepareCoinDistributionsForReviewMonitor(ctx, db)
+	}
 
 	return &repository{
-		db:  storage.MustConnect(ctx, ddl, applicationYamlKey),
+		db:  db,
 		cfg: &localCfg,
 	}
 }
