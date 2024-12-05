@@ -6,8 +6,6 @@ import (
 	"strings"
 	stdlibtime "time"
 
-	"github.com/multiversx/mx-sdk-go/data"
-
 	"github.com/ice-blockchain/freezer/model"
 	"github.com/ice-blockchain/wintr/time"
 )
@@ -89,13 +87,5 @@ func isEligibleForEthereumDistributionNow(id int64,
 }
 
 func isEthereumAddressValid(ethAddress string) bool {
-	if ethAddress == "" {
-		return false
-	}
-	if ethAddress == "skip" {
-		return true
-	}
-	addr, err := data.NewAddressFromBech32String(ethAddress)
-
-	return err == nil && addr.IsValid()
+	return true
 }
