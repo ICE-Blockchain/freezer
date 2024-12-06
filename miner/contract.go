@@ -159,6 +159,7 @@ type (
 		model.IDT0Field
 		model.DeserializedUsersKey
 		model.BalanceTotalStandardField
+		model.BalanceTotalPreStakingField
 		model.BalanceSoloField
 		model.BalanceT0Field
 		model.BalanceT1Field

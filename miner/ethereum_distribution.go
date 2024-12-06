@@ -52,7 +52,7 @@ func (ref *referral) isEligibleForSelfForEthereumDistribution(now, lastEthereumC
 			cfg.EthereumDistributionFrequency.Max) &&
 		coindistribution.IsEligibleForEthereumDistribution(
 			coinDistributionCollectorSettings.MinMiningStreaksRequired,
-			ref.BalanceTotalStandard-ref.BalanceSoloEthereum-ref.BalanceT0Ethereum-ref.BalanceT1Ethereum-ref.BalanceT2Ethereum,
+			(ref.BalanceTotalStandard+ref.BalanceTotalPreStaking)-ref.BalanceSoloEthereum-ref.BalanceT0Ethereum-ref.BalanceT1Ethereum-ref.BalanceT2Ethereum,
 			coinDistributionCollectorSettings.MinBalanceRequired,
 			miningBlockchainAccountAddress,
 			ref.Country,
@@ -115,7 +115,7 @@ func (u *user) isEligibleForSelfForEthereumDistribution(now *time.Time, selfVeri
 			cfg.EthereumDistributionFrequency.Max) &&
 		coindistribution.IsEligibleForEthereumDistribution(
 			coinDistributionCollectorSettings.MinMiningStreaksRequired,
-			u.BalanceTotalStandard-u.BalanceSoloEthereum-u.BalanceT0Ethereum-u.BalanceT1Ethereum-u.BalanceT2Ethereum,
+			(u.BalanceTotalStandard+u.BalanceTotalPreStaking)-u.BalanceSoloEthereum-u.BalanceT0Ethereum-u.BalanceT1Ethereum-u.BalanceT2Ethereum,
 			coinDistributionCollectorSettings.MinBalanceRequired,
 			miningBlockchainAccountAddress,
 			u.Country,
@@ -392,8 +392,8 @@ func wasNotProcessedToday(now, lastEthereumCoinDistributionProcessedAt *time.Tim
 }
 
 func (u *user) processEthereumCoinDistributionForSolo(now *time.Time) float64 {
-	standard, _ := tokenomics.ApplyPreStaking(u.BalanceSolo, u.PreStakingAllocation, u.PreStakingBonus)
-	ethIce := coindistribution.CalculateEthereumDistributionICEBalance(standard-u.BalanceSoloEthereum, cfg.EthereumDistributionFrequency.Min, cfg.EthereumDistributionFrequency.Max, now, cfg.coinDistributionCollectorSettings.Load().EndDate) //nolint:lll // .
+	standard, preStaking := tokenomics.ApplyPreStaking(u.BalanceSolo, u.PreStakingAllocation, u.PreStakingBonus)
+	ethIce := coindistribution.CalculateEthereumDistributionICEBalance(standard+preStaking-u.BalanceSoloEthereum, cfg.EthereumDistributionFrequency.Min, cfg.EthereumDistributionFrequency.Max, now, cfg.coinDistributionCollectorSettings.Load().EndDate) //nolint:lll // .
 	if ethIce <= 0 {
 		return 0
 	}
@@ -407,8 +407,8 @@ func (u *user) processEthereumCoinDistributionForSolo(now *time.Time) float64 {
 }
 
 func (u *user) processEthereumCoinDistributionForT0(now *time.Time) float64 {
-	standard, _ := tokenomics.ApplyPreStaking(u.BalanceT0, u.PreStakingAllocation, u.PreStakingBonus)
-	ethIce := coindistribution.CalculateEthereumDistributionICEBalance(standard-u.BalanceT0Ethereum, cfg.EthereumDistributionFrequency.Min, cfg.EthereumDistributionFrequency.Max, now, cfg.coinDistributionCollectorSettings.Load().EndDate) //nolint:lll // .
+	standard, preStaking := tokenomics.ApplyPreStaking(u.BalanceT0, u.PreStakingAllocation, u.PreStakingBonus)
+	ethIce := coindistribution.CalculateEthereumDistributionICEBalance(standard+preStaking-u.BalanceT0Ethereum, cfg.EthereumDistributionFrequency.Min, cfg.EthereumDistributionFrequency.Max, now, cfg.coinDistributionCollectorSettings.Load().EndDate) //nolint:lll // .
 	if ethIce <= 0 {
 		return 0
 	}
@@ -423,8 +423,8 @@ func (u *user) processEthereumCoinDistributionForT0(now *time.Time) float64 {
 
 // The double `For` is intended, cuz it's ForXX, where XX can be Solo/T0/ForT1/ForTMinus1.
 func (u *user) processEthereumCoinDistributionForForT0(t0 *referral, now *time.Time) float64 {
-	standard, _ := tokenomics.ApplyPreStaking(u.BalanceForT0+cfg.WelcomeBonusV2Amount, t0.PreStakingAllocation, t0.PreStakingBonus)
-	ethIce := coindistribution.CalculateEthereumDistributionICEBalance(standard-u.BalanceForT0Ethereum, cfg.EthereumDistributionFrequency.Min, cfg.EthereumDistributionFrequency.Max, now, cfg.coinDistributionCollectorSettings.Load().EndDate) //nolint:lll // .
+	standard, preStaking := tokenomics.ApplyPreStaking(u.BalanceForT0+cfg.WelcomeBonusV2Amount, t0.PreStakingAllocation, t0.PreStakingBonus)
+	ethIce := coindistribution.CalculateEthereumDistributionICEBalance(standard+preStaking-u.BalanceForT0Ethereum, cfg.EthereumDistributionFrequency.Min, cfg.EthereumDistributionFrequency.Max, now, cfg.coinDistributionCollectorSettings.Load().EndDate) //nolint:lll // .
 	if ethIce <= 0 {
 		return 0
 	}
@@ -438,8 +438,8 @@ func (u *user) processEthereumCoinDistributionForForT0(t0 *referral, now *time.T
 
 // The double `For` is intended, cuz it's ForXX, where XX can be Solo/T0/ForT1/ForTMinus1.
 func (u *user) processEthereumCoinDistributionForForTMinus1(tMinus1 *referral, now *time.Time) float64 {
-	standard, _ := tokenomics.ApplyPreStaking(u.BalanceForTMinus1, tMinus1.PreStakingAllocation, tMinus1.PreStakingBonus)
-	ethIce := coindistribution.CalculateEthereumDistributionICEBalance(standard-u.BalanceForTMinus1Ethereum, cfg.EthereumDistributionFrequency.Min, cfg.EthereumDistributionFrequency.Max, now, cfg.coinDistributionCollectorSettings.Load().EndDate) //nolint:lll // .
+	standard, preStaking := tokenomics.ApplyPreStaking(u.BalanceForTMinus1, tMinus1.PreStakingAllocation, tMinus1.PreStakingBonus)
+	ethIce := coindistribution.CalculateEthereumDistributionICEBalance(standard+preStaking-u.BalanceForTMinus1Ethereum, cfg.EthereumDistributionFrequency.Min, cfg.EthereumDistributionFrequency.Max, now, cfg.coinDistributionCollectorSettings.Load().EndDate) //nolint:lll // .
 	if ethIce <= 0 {
 		return 0
 	}
