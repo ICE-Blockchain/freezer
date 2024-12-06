@@ -387,7 +387,7 @@ func (r *repository) StartPrepareCoinDistributionsForReviewMonitor(ctx context.C
 	for {
 		select {
 		case <-ticker.C:
-			reqCtx, cancel := context.WithTimeout(ctx, 10*stdlibtime.Minute) //nolint:gomnd // .
+			reqCtx, cancel := context.WithTimeout(ctx, 30*stdlibtime.Minute) //nolint:gomnd // .
 			log.Error(errors.Wrap(tryPrepareCoinDistributionsForReview(reqCtx, r.db), "failed to tryPrepareCoinDistributionsForReview"))
 			cancel()
 		case <-ctx.Done():
